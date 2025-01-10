@@ -758,9 +758,8 @@ function initTimelineInteraction(timeline) {
                 const target = event.target;
                 const timelineRect = targetTimeline.getBoundingClientRect();
                 
-                let newSize, startTime, endTime, startMinutes, endMinutes, newWidth;
+                let newSize, startTime, startMinutes, endMinutes, newWidth;
                 const isMobile = getIsMobile();
-                const isLeftEdge = event.edges.left;
                 
                 if (isMobile) {
                     // Mobile: Calculate height in percentage
@@ -782,15 +781,9 @@ function initTimelineInteraction(timeline) {
                     newSize = intervals * tenMinutesWidth;
                     newSize = Math.max(tenMinutesWidth, Math.min(newSize, 100));
                     
-                    if (isLeftEdge) {
-                        endTime = target.dataset.end;
-                        endMinutes = timeToMinutes(endTime);
-                        startMinutes = positionToMinutes(parseFloat(target.style.left));
-                    } else {
-                        startTime = target.dataset.start;
-                        startMinutes = timeToMinutes(startTime);
-                        endMinutes = positionToMinutes(parseFloat(target.style.left) + newSize);
-                    }
+                    startTime = target.dataset.start;
+                    startMinutes = timeToMinutes(startTime);
+                    endMinutes = positionToMinutes(parseFloat(target.style.left) + newSize);
                 }
                 
                 if (!canPlaceActivity(startMinutes, endMinutes, target.dataset.id)) {
