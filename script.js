@@ -740,7 +740,7 @@ function initTimelineInteraction(timeline) {
             target.dataset.originalHeight = target.dataset.height;
 
         },
-        edges: { right: !getIsMobile(), bottom: getIsMobile() },
+        edges: { left: !getIsMobile(), right: !getIsMobile(), bottom: getIsMobile() },
         modifiers: [
             interact.modifiers.restrictEdges({
                 outer: '.timeline'

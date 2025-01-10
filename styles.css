@@ -728,6 +728,11 @@ body {
         right: -5px;
         top: 0;
     }
+    
+    .resize-handle.left {
+        left: -5px;
+        top: 0;
+    }
 }
 
 /* Mobile resize handle */
