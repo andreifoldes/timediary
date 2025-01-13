@@ -1,11 +1,21 @@
-// drag_creation.js
 import { 
-  getIsMobile, 
-  positionToMinutes,
-  minutesToPercentage,
-  formatTimeHHMMWithDayOffset // or whichever you prefer
+    getIsMobile,
+    positionToMinutes,
+    minutesToPercentage,
+    formatTimeHHMM,
+    formatTimeDDMMYYYYHHMM,
+    generateUniqueId,
+    createTimeLabel,
+    updateTimeLabel,
+    canPlaceActivity,
+    isTimelineFull,
+    getCurrentTimelineData,
+    getCurrentTimelineKey,
+    updateButtonStates,
+    getTextDivClass
 } from './utils.js';
-import { updateTimeLabel } from './utils.js';  // or wherever it's defined
+
+import { DEBUG_MODE } from './constants.js';
 
 const DRAG_THRESHOLD_PX = 5;     // If user moves less than this, treat as "click"
 const SNAP_INTERVAL = 10;        // minutes

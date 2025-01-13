@@ -670,7 +670,8 @@ function initTimeline(timeline) {
 }
 
 
-import { handleResizeStart, handleResizeMove, handleResizeEnd } from './timeline_interaction.js';
+import { initTimelineInteraction } from './timeline_interaction.js';
+import { initBlockCreationByDrag } from './activity_creation.js';
 
 function initTimelineInteraction(timeline) {
     if (!timeline) {
@@ -678,7 +679,9 @@ function initTimelineInteraction(timeline) {
         return;
     }
     const targetTimeline = timeline;
-    let lastClickTime = 0;
+    
+    // Initialize drag-to-create functionality
+    initBlockCreationByDrag(targetTimeline);
     
     // Initialize interact.js resizable
     interact('.activity-block').resizable({
@@ -699,8 +702,8 @@ function initTimelineInteraction(timeline) {
         }
     });
 
-    // Legacy click handler for debugging only
-    if (DEBUG_MODE) {
+    // Debug-only click handler for testing
+    if (DEBUG_MODE && false) { // Disabled by default even in debug mode
         targetTimeline.addEventListener('click', (e) => {
         // Only process clicks on the active timeline
         if (!targetTimeline || targetTimeline !== window.timelineManager.activeTimeline) return;
