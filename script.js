@@ -670,6 +670,8 @@ function initTimeline(timeline) {
 }
 
 
+import { handleResizeStart, handleResizeMove, handleResizeEnd } from './timeline_interaction.js';
+
 function initTimelineInteraction(timeline) {
     if (!timeline) {
         console.error('Timeline must be provided to initTimelineInteraction');
@@ -679,15 +681,6 @@ function initTimelineInteraction(timeline) {
     
     // Initialize interact.js resizable
     interact('.activity-block').resizable({
-        onstart: function(event) {
-            // Store original values before resize
-            const target = event.target;
-            target.dataset.originalStart = target.dataset.start;
-            target.dataset.originalEnd = target.dataset.end;
-            target.dataset.originalLength = target.dataset.length;
-            target.dataset.originalHeight = target.dataset.height;
-
-        },
         edges: { left: !getIsMobile(), right: !getIsMobile(), bottom: getIsMobile() },
         modifiers: [
             interact.modifiers.restrictEdges({
@@ -699,213 +692,9 @@ function initTimelineInteraction(timeline) {
         ],
         inertia: false,
         listeners: {
-            start(event) {
-                event.target.classList.add('resizing');
-            },
-            move(event) {
-                const target = event.target;
-                const timelineRect = targetTimeline.getBoundingClientRect();
-                
-                let newSize, startTime, startMinutes, endMinutes, newWidth;
-                const isMobile = getIsMobile();
-                
-                if (isMobile) {
-                    // Mobile: Calculate height in percentage
-                    let newHeight = (event.rect.height / timelineRect.height) * 100;
-                    const tenMinutesHeight = (10 / (24 * 60)) * 100;
-                    const intervals = Math.round(newHeight / tenMinutesHeight);
-                    newSize = intervals * tenMinutesHeight;
-                    newSize = Math.max(tenMinutesHeight, Math.min(newSize, 100));
-                    newWidth = newSize; // Set newWidth for time label calculations
-                    
-                    startTime = target.dataset.start;
-                    startMinutes = timeToMinutes(startTime);
-                    endMinutes = positionToMinutes(parseFloat(target.style.top) + newSize);
-                } else {
-                    // Desktop: Calculate width in percentage
-                    const isLeftEdge = event.edges.left;
-
-                    if (isLeftEdge) {
-                        // When dragging left edge, update start time and keep end time
-                        const rawLeft = parseFloat(event.rect.left) / timelineRect.width * 100;
-                        const rawStartMinutes = positionToMinutes(rawLeft);
-                        endMinutes = timeToMinutes(target.dataset.end);
-                        
-                        // Calculate the nearest 10-minute interval for the raw start minutes
-                        startMinutes = Math.round(rawStartMinutes / 10) * 10;
-                        
-                        // Normalize times for comparison (shift times after midnight)
-                        let normalizedEnd = endMinutes < 240 ? endMinutes + 1440 : endMinutes;
-                        let normalizedStart = startMinutes < 240 ? startMinutes + 1440 : startMinutes;
-                        
-                        // If dragging past the end time, stop at the end time minus 10 minutes
-                        if (normalizedStart > normalizedEnd) {
-                            normalizedStart = normalizedEnd - 10;
-                            startMinutes = normalizedStart >= 1440 ? normalizedStart - 1440 : normalizedStart;
-                        }
-                        
-                        // Special case for 04:00
-                        if (startMinutes <= 245) {
-                            startMinutes = 240;
-                        }
-                        
-                        // Ensure minimum 10-minute difference
-                        const timeDiff = normalizedEnd - startMinutes;
-                        if (timeDiff < 10) {
-                            startMinutes = normalizedEnd - 10;
-                        }
-                        
-                        // Normalize back to 0-1440 range
-                        if (startMinutes >= 1440) {
-                            startMinutes -= 1440;
-                        }
-                        
-                        // Calculate position and width
-                        const finalLeft = minutesToPercentage(startMinutes);
-                        newSize = ((endMinutes - startMinutes) / (24 * 60)) * 100;
-                        
-                        // Update block position and size
-                        target.style.left = `${finalLeft}%`;
-                        target.style.width = `${newSize}%`;
-                        
-                        // Update start time in dataset
-                        const newStartTime = formatTimeHHMM(startMinutes);
-                        target.dataset.start = newStartTime;
-                        
-                        // Update time label immediately for left edge
-                        const timeLabel = target.querySelector('.time-label');
-                        if (timeLabel) {
-                            updateTimeLabel(timeLabel, newStartTime, target.dataset.end, target);
-                        }
-                        
-                        // Set newWidth for consistency
-                        newWidth = newSize;
-                    } else {
-                        // When dragging right edge, keep start time and update end
-                        newWidth = (event.rect.width / timelineRect.width) * 100;
-                        const tenMinutesWidth = (10 / (24 * 60)) * 100;
-                        const intervals = Math.round(newWidth / tenMinutesWidth);
-                        newSize = intervals * tenMinutesWidth;
-                        newSize = Math.max(tenMinutesWidth, Math.min(newSize, 100));
-                        
-                        startTime = target.dataset.start;
-                        startMinutes = timeToMinutes(startTime);
-                        endMinutes = positionToMinutes(parseFloat(target.style.left) + newSize);
-                        
-                        // Update width for right edge
-                        target.style.width = `${newSize}%`;
-                    }
-                }
-                
-                if (!canPlaceActivity(startMinutes, endMinutes, target.dataset.id)) {
-                    target.classList.add('invalid');
-                    setTimeout(() => target.classList.remove('invalid'), 400);
-                    return;
-                }
-                
-                // Only update size for mobile or right edge desktop drag
-                if (isMobile) {
-                    target.style.height = `${newSize}%`;
-                    newWidth = newSize; // For time label calculations
-                }
-
-                // Update time label
-                const timeLabel = target.querySelector('.time-label');
-                if (timeLabel) {
-                    const startTime = target.dataset.start;
-                    const startMinutes = timeToMinutes(startTime);
-                    let endMinutes;
-                    let newWidth = newSize; // Ensure newWidth is defined for time label calculations
-                        
-                    if (isMobile) {
-                        endMinutes = positionToMinutes((parseFloat(target.style.top) + newWidth));
-                        // If the position is at the end of timeline (100%), set to 04:00
-                        if (parseFloat(target.style.top) + newWidth >= 100) {
-                            endMinutes = 240; // 04:00 in minutes
-                        }
-                    } else {
-                        endMinutes = positionToMinutes((parseFloat(target.style.left) + newWidth));
-                        // If the position is at the end of timeline (100%), set to 04:00
-                        if (parseFloat(target.style.left) + newWidth >= 100) {
-                            endMinutes = 240; // 04:00 in minutes
-                        }
-                    }
-                    const endTime = formatTimeHHMM(endMinutes);
-                    updateTimeLabel(timeLabel, startTime, endTime, target);
-                            
-                    // Update the end time and length in the dataset using calculateTimeDifference
-                    target.dataset.end = endTime;
-                    const newLength = calculateTimeDifference(startTime, endTime);
-                    target.dataset.length = newLength;
-                    
-                    // Update text class based on length and mode
-                    const textDiv = target.querySelector('div[class^="activity-block-text"]');
-                    if (textDiv) {
-                        textDiv.className = getIsMobile()
-                            ? (newLength >= 60 ? 'activity-block-text-narrow wide resized' : 'activity-block-text-narrow')
-                            : (newLength >= 60 ? 'activity-block-text-narrow wide resized' : 'activity-block-text-vertical');
-                    }
-                    
-                    // Update the activity data in timelineManager
-                    const activityId = target.dataset.id;
-                    const currentData = getCurrentTimelineData();
-                    const activityIndex = currentData.findIndex(activity => activity.id === activityId);
-                    
-                    if (activityIndex !== -1) {
-                        const times = formatTimeDDMMYYYYHHMM(formatTimeHHMM(startMinutes), formatTimeHHMM(endMinutes));
-                        if (!times.startTime || !times.endTime) {
-                            throw new Error('Activity start time and end time must be defined');
-                        }
-                        currentData[activityIndex].startTime = times.startTime;
-                        currentData[activityIndex].endTime = times.endTime;
-                        currentData[activityIndex].blockLength = parseInt(target.dataset.length);
-                        
-                        // Validate timeline after resizing activity
-                        try {
-                            const timelineKey = event.target.dataset.timelineKey;
-                            window.timelineManager.metadata[timelineKey].validate();
-                        } catch (error) {
-                            console.error('Timeline validation failed:', error);
-                            // Revert the change
-                            const originalTimes = formatTimeDDMMYYYYHHMM(target.dataset.originalStart, target.dataset.originalEnd);
-                            currentData[activityIndex].startTime = originalTimes.startTime;
-                            currentData[activityIndex].endTime = originalTimes.endTime;
-                            currentData[activityIndex].blockLength = parseInt(target.dataset.originalLength);
-                            const block = document.createElement('div');
-                            block.className = 'activity-block invalid';
-                            block.style.backgroundColor = currentBlock.style.backgroundColor;
-                            block.style.width = currentBlock.style.width;
-                            block.style.height = currentBlock.style.height;
-                            block.style.top = currentBlock.style.top;
-                            block.style.left = currentBlock.style.left;
-                            targetTimeline.appendChild(block);
-                            setTimeout(() => block.remove(), 400);
-                            return;
-                        }
-
-                        if (DEBUG_MODE) {
-                            console.log('Updated activity data:', currentData[activityIndex]);
-                        }
-                    }
-                }
-            },
-            end(event) {
-                event.target.classList.remove('resizing');
-                const textDiv = event.target.querySelector('div[class^="activity-block-text"]');
-                const timeLabel = event.target.querySelector('.time-label');
-                if (timeLabel) {
-                    timeLabel.style.display = 'block'; // Ensure time label stays visible after resize
-                }
-                if (textDiv) {
-                    // Get the current length from the block's dataset
-                    const length = parseInt(event.target.dataset.length);
-                    // Update classes based on length and mode
-                    textDiv.className = getIsMobile()
-                        ? (length >= 60 ? 'activity-block-text-narrow wide resized' : 'activity-block-text-narrow')
-                        : (length >= 60 ? 'activity-block-text-narrow wide resized' : 'activity-block-text-vertical');
-                }
-                updateButtonStates();
-            }
+            start: handleResizeStart,
+            move: (event) => handleResizeMove(event, targetTimeline),
+            end: handleResizeEnd
         }
     });
     
