@@ -16,6 +16,17 @@ export function getCurrentTimelineData() {
 // Make getCurrentTimelineData available globally
 window.getCurrentTimelineData = getCurrentTimelineData;
 
+// Function to scroll to active timeline
+export function scrollToActiveTimeline() {
+    const activeTimeline = window.timelineManager.activeTimeline;
+    if (!activeTimeline) return;
+
+    const isMobile = window.innerWidth <= 1440;
+    if (isMobile) {
+        activeTimeline.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+}
+
 // UI Functions
 function createTimeLabel(block, showImmediately = false) {
     // Check if we're in vertical mode by looking at window width

@@ -7,9 +7,9 @@ import {
     createTimelineDataFrame,
     getTimelineCoverage,
     validateMinCoverage,
-    scrollToActiveTimeline,
     createModal,
-    createFloatingAddButton
+    createFloatingAddButton,
+    scrollToActiveTimeline
 } from './utils.js';
 import { updateIsMobile, getIsMobile } from './globals.js';
 let selectedActivity = null;
