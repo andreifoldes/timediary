@@ -449,8 +449,8 @@ export function canPlaceActivity(newStart, newEnd, excludeId = null) {
         const activityStart = parseInt(activity.startTime || activity.dataset?.startRaw || 0);
         const activityEnd = parseInt(activity.endTime || activity.dataset?.endRaw || 0);
         
-        // Check if ranges overlap
-        const overlaps = Math.max(newStart, activityStart) < Math.min(newEnd, activityEnd);
+        // Check if ranges overlap using proper interval comparison
+        const overlaps = !(newEnd <= activityStart || newStart >= activityEnd);
         
         if (DEBUG_MODE && overlaps) {
             console.log('Overlap detected in timeline', currentKey, {
@@ -458,7 +458,8 @@ export function canPlaceActivity(newStart, newEnd, excludeId = null) {
                 activityStart,
                 activityEnd,
                 newStart,
-                newEnd
+                newEnd,
+                overlapCondition: `!(${newEnd} <= ${activityStart} || ${newStart} >= ${activityEnd})`
             });
         }
         return overlaps;
