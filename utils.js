@@ -19,7 +19,7 @@ window.getCurrentTimelineData = getCurrentTimelineData;
 // UI Functions
 function createTimeLabel(block, showImmediately = false) {
     // Check if we're in vertical mode by looking at window width
-    const isVerticalMode = window.innerWidth <= 1024;
+    const isVerticalMode = window.innerWidth <= 1440;
     
     if (isVerticalMode) {
         // Create activity text container
@@ -70,7 +70,7 @@ function createTimeLabel(block, showImmediately = false) {
 }
 
 function updateTimeLabel(label, startTime, endTime) {
-    const isVerticalMode = window.innerWidth <= 1024;
+    const isVerticalMode = window.innerWidth <= 1440;
     
     label.textContent = `${startTime} - ${endTime}`;
     
@@ -378,6 +378,250 @@ export function isOverlapping(elem1, elem2) {
         rect1.bottom < rect2.top ||
         rect1.top > rect2.bottom
     );
+}
+
+// Function to calculate timeline coverage in minutes
+export function getTimelineCoverage() {
+    const activeTimeline = document.querySelector('.timeline[data-active="true"]');
+    if (!activeTimeline) return 0;
+
+    const activityBlocks = activeTimeline.querySelectorAll('.activity-block');
+    if (!activityBlocks.length) return 0;
+
+    // Calculate total minutes covered using data-length attributes
+    let coveredMinutes = 0;
+    const sortedBlocks = [...activityBlocks].sort((a, b) => 
+        timeToMinutes(a.dataset.start) - timeToMinutes(b.dataset.start)
+    );
+
+    // Track the latest end time seen
+    let latestEndTime = 0;
+
+    sortedBlocks.forEach(block => {
+        const startMinutes = timeToMinutes(block.dataset.start);
+        const endMinutes = timeToMinutes(block.dataset.end);
+        let blockLength;
+        // Special case: If activity is from 4:00 to 4:00, it's a full day
+        if (startMinutes === 240 && endMinutes === 240) { // 240 minutes = 4:00
+            blockLength = 1440; // Full day in minutes
+        } else if (startMinutes === 240 && endMinutes === 0) {
+            // Special case: 04:00 to 00:00 = 20 hours = 1200 minutes
+            blockLength = 1200;
+        } else {
+            // Calculate length using absolute difference
+            blockLength = Math.abs(endMinutes - startMinutes);
+            if (blockLength === 0) {
+                // If start and end times are the same (but not 4:00-4:00)
+                blockLength = 0;
+            } else if (endMinutes < startMinutes) {
+                // If end time is before start time, it spans across midnight
+                blockLength = 1440 - blockLength;
+            }
+        }
+        
+        // Validate that block length is positive
+        if (blockLength < 0) {
+            throw new Error(`Invalid negative block length: ${blockLength} minutes. Start: ${startMinutes}, End: ${endMinutes}`);
+        }
+        
+        // Only count non-overlapping portions
+        if (startMinutes > latestEndTime) {
+            coveredMinutes += blockLength;
+        } else if (endMinutes > latestEndTime) {
+            coveredMinutes += endMinutes - latestEndTime;
+        }
+        
+        latestEndTime = Math.max(latestEndTime, endMinutes);
+    });
+
+    console.log(`Timeline coverage: ${coveredMinutes} minutes covered`);
+    return coveredMinutes;
+}
+
+export function validateMinCoverage(coverage) {
+    // Convert to number if it's a string
+    const numCoverage = parseInt(coverage);
+    
+    // Check if it's a valid number
+    if (isNaN(numCoverage)) {
+        throw new Error('min_coverage must be a valid number');
+    }
+    
+    // Check range
+    if (numCoverage < 0 || numCoverage > 1440) {
+        throw new Error('min_coverage must be between 0 and 1440');
+    }
+    
+    // Check if divisible by 10
+    if (numCoverage % 10 !== 0) {
+        throw new Error('min_coverage must be divisible by 10');
+    }
+    
+    return numCoverage;
+}
+
+// Helper function to scroll to active timeline
+export function scrollToActiveTimeline() {
+    if (!window.timelineManager.activeTimeline) return;
+    
+    const activeTimeline = window.timelineManager.activeTimeline.closest('.timeline-container');
+    if (!activeTimeline) return;
+
+    if (getIsMobile()) {
+        // Mobile: horizontal scroll
+        const timelinesWrapper = document.querySelector('.timelines-wrapper');
+        if (timelinesWrapper) {
+            // Check if wrapper has scrollable overflow
+            const hasScrollableOverflow = timelinesWrapper.scrollWidth > timelinesWrapper.clientWidth;
+            
+            if (hasScrollableOverflow) {
+                // Calculate if timeline is partially or fully hidden
+                const timelineRect = activeTimeline.getBoundingClientRect();
+                const wrapperRect = timelinesWrapper.getBoundingClientRect();
+                
+                // Check if timeline is not fully visible
+                const isPartiallyHidden = 
+                    timelineRect.left < wrapperRect.left ||
+                    timelineRect.right > wrapperRect.right;
+                
+                if (isPartiallyHidden) {
+                    // Scroll to make timeline fully visible
+                    timelinesWrapper.scrollTo({
+                        left: activeTimeline.offsetLeft,
+                        behavior: 'smooth'
+                    });
+                }
+            }
+        }
+    } else {
+        // Desktop: vertical scroll to center
+        const windowHeight = window.innerHeight;
+        const timelineRect = activeTimeline.getBoundingClientRect();
+        const scrollTarget = window.pageYOffset + timelineRect.top - (windowHeight / 2) + (timelineRect.height / 2);
+        
+        window.scrollTo({
+            top: scrollTarget,
+            behavior: 'smooth'
+        });
+    }
+}
+
+export function createModal() {
+    // Create custom activity input modal
+    const customActivityModal = document.createElement('div');
+    customActivityModal.className = 'modal-overlay';
+    customActivityModal.id = 'customActivityModal';
+    customActivityModal.innerHTML = `
+        <div class="modal">
+            <div class="modal-header">
+                <h3>Enter Custom Activity</h3>
+                <button class="modal-close">&times;</button>
+            </div>
+            <div class="modal-content">
+                <input type="text" id="customActivityInput" maxlength="30" placeholder="Enter your activity (max 30 chars)">
+                <div class="button-container">
+                    <button id="confirmCustomActivity" class="btn save-btn">OK</button>
+                </div>
+            </div>
+        </div>
+    `;
+
+    customActivityModal.querySelector('.modal-close').addEventListener('click', () => {
+        customActivityModal.style.display = 'none';
+    });
+
+    customActivityModal.addEventListener('click', (e) => {
+        if (e.target === customActivityModal) {
+            customActivityModal.style.display = 'none';
+        }
+    });
+
+    // Create activities modal
+    const activitiesModal = document.createElement('div');
+    activitiesModal.className = 'modal-overlay';
+    activitiesModal.id = 'activitiesModal';
+    activitiesModal.innerHTML = `
+        <div class="modal">
+            <div class="modal-header">
+                <h3>Add Activity</h3>
+                <button class="modal-close">&times;</button>
+            </div>
+            <div id="modalActivitiesContainer"></div>
+        </div>
+    `;
+
+    activitiesModal.querySelector('.modal-close').addEventListener('click', () => {
+        activitiesModal.style.display = 'none';
+    });
+
+    activitiesModal.addEventListener('click', (e) => {
+        if (e.target === activitiesModal) {
+            activitiesModal.style.display = 'none';
+        }
+    });
+
+    // Create confirmation modal
+    const confirmationModal = document.createElement('div');
+    confirmationModal.className = 'modal-overlay';
+    confirmationModal.id = 'confirmationModal';
+    confirmationModal.innerHTML = `
+        <div class="modal">
+            <div class="modal-content">
+                <h3>Are you sure?</h3>
+                <p>You will not be able to change your responses.</p>
+                <div class="button-container">
+                    <button id="confirmCancel" class="btn btn-secondary">Cancel</button>
+                    <button id="confirmOk" class="btn save-btn">OK</button>
+                </div>
+            </div>
+        </div>
+    `;
+
+    confirmationModal.querySelector('#confirmCancel').addEventListener('click', () => {
+        confirmationModal.style.display = 'none';
+    });
+
+    confirmationModal.querySelector('#confirmOk').addEventListener('click', () => {
+        confirmationModal.style.display = 'none';
+        sendData();
+        document.getElementById('nextBtn').disabled = true;
+    });
+
+    document.body.appendChild(activitiesModal);
+    document.body.appendChild(confirmationModal);
+    document.body.appendChild(customActivityModal);
+    return activitiesModal;
+}
+
+export function createFloatingAddButton() {
+    const button = document.createElement('button');
+    button.className = 'floating-add-button';
+    button.innerHTML = '+';
+    button.title = 'Add Activity';
+    
+    const modal = createModal();
+    
+    button.addEventListener('click', () => {
+        // Show modal with activities
+        modal.style.display = 'block';
+        
+        // Get the current activities and render them in the modal
+        const currentKey = getCurrentTimelineKey();
+        const categories = window.timelineManager.metadata[currentKey].categories;
+        
+        // Render activities in modal
+        renderActivities(categories, document.getElementById('modalActivitiesContainer'));
+        
+        // Automatically open first category in mobile view
+        if (getIsMobile()) {
+            const firstCategory = modal.querySelector('.activity-category');
+            if (firstCategory) {
+                firstCategory.classList.add('active');
+            }
+        }
+    });
+
+    document.body.appendChild(button);
 }
 
 export function createTimelineDataFrame() {

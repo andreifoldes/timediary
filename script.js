@@ -775,23 +775,76 @@ function initTimelineInteraction(timeline) {
                     endMinutes = positionToMinutes(parseFloat(target.style.top) + newSize);
                 } else {
                     // Desktop: Calculate width in percentage
-                    newWidth = (event.rect.width / timelineRect.width) * 100;
-                    const tenMinutesWidth = (10 / (24 * 60)) * 100;
-                    const intervals = Math.round(newWidth / tenMinutesWidth);
-                    newSize = intervals * tenMinutesWidth;
-                    newSize = Math.max(tenMinutesWidth, Math.min(newSize, 100));
-                    
-                    // Check if dragging left edge
                     const isLeftEdge = event.edges.left;
+
                     if (isLeftEdge) {
-                        // When dragging left edge, update start time based on new left position
-                        startMinutes = positionToMinutes(parseFloat(target.style.left));
+                        // When dragging left edge, update start time and keep end time
+                        const rawLeft = parseFloat(event.rect.left) / timelineRect.width * 100;
+                        const rawStartMinutes = positionToMinutes(rawLeft);
                         endMinutes = timeToMinutes(target.dataset.end);
+                        
+                        // Normalize times for comparison (shift times after midnight)
+                        let normalizedEnd = endMinutes < 240 ? endMinutes + 1440 : endMinutes;
+                        let normalizedStart = rawStartMinutes < 240 ? rawStartMinutes + 1440 : rawStartMinutes;
+                        
+                        // If dragging past the end time, stop at the end time minus 10 minutes
+                        if (normalizedStart > normalizedEnd) {
+                            normalizedStart = normalizedEnd - 10;
+                        }
+                        
+                        // Round to nearest 10-minute interval
+                        startMinutes = Math.round(normalizedStart / 10) * 10;
+                        
+                        // Special case for 04:00
+                        if (rawStartMinutes <= 245) {
+                            startMinutes = 240;
+                        }
+                        
+                        // Ensure minimum 10-minute difference
+                        const timeDiff = normalizedEnd - startMinutes;
+                        if (timeDiff < 10) {
+                            startMinutes = normalizedEnd - 10;
+                        }
+                        
+                        // Normalize back to 0-1440 range
+                        if (startMinutes >= 1440) {
+                            startMinutes -= 1440;
+                        }
+                        
+                        // Calculate position and width
+                        const finalLeft = minutesToPercentage(startMinutes);
+                        newSize = ((endMinutes - startMinutes) / (24 * 60)) * 100;
+                        
+                        // Update block position and size
+                        target.style.left = `${finalLeft}%`;
+                        target.style.width = `${newSize}%`;
+                        
+                        // Update start time in dataset
+                        const newStartTime = formatTimeHHMM(startMinutes);
+                        target.dataset.start = newStartTime;
+                        
+                        // Update time label immediately for left edge
+                        const timeLabel = target.querySelector('.time-label');
+                        if (timeLabel) {
+                            updateTimeLabel(timeLabel, newStartTime, target.dataset.end, target);
+                        }
+                        
+                        // Set newWidth for consistency
+                        newWidth = newSize;
                     } else {
                         // When dragging right edge, keep start time and update end
+                        newWidth = (event.rect.width / timelineRect.width) * 100;
+                        const tenMinutesWidth = (10 / (24 * 60)) * 100;
+                        const intervals = Math.round(newWidth / tenMinutesWidth);
+                        newSize = intervals * tenMinutesWidth;
+                        newSize = Math.max(tenMinutesWidth, Math.min(newSize, 100));
+                        
                         startTime = target.dataset.start;
                         startMinutes = timeToMinutes(startTime);
                         endMinutes = positionToMinutes(parseFloat(target.style.left) + newSize);
+                        
+                        // Update width for right edge
+                        target.style.width = `${newSize}%`;
                     }
                 }
                 
@@ -801,13 +854,10 @@ function initTimelineInteraction(timeline) {
                     return;
                 }
                 
-                // Update block size if no overlap
+                // Only update size for mobile or right edge desktop drag
                 if (isMobile) {
                     target.style.height = `${newSize}%`;
                     newWidth = newSize; // For time label calculations
-                } else {
-                    target.style.width = `${newSize}%`;
-                    newWidth = newSize;
                 }
 
                 // Update time label
