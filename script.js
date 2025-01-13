@@ -606,15 +606,23 @@ function renderActivities(categories, container = document.getElementById('activ
                         const selectedButtons = Array.from(categoryButtons).filter(btn => btn.classList.contains('selected'));
             
                         if (selectedButtons.length > 0) {
+                            const selections = selectedButtons.map(btn => ({
+                                name: btn.querySelector('.activity-text').textContent,
+                                color: btn.style.getPropertyValue('--color')
+                            }));
+                            
                             selectedActivity = {
-                                selections: selectedButtons.map(btn => ({
-                                    name: btn.querySelector('.activity-text').textContent,
-                                    color: btn.style.getPropertyValue('--color')
-                                })),
-                                category: category.name
+                                name: selections.map(s => s.name).join(' | '),
+                                color: selections[0].color, // Use first color as primary
+                                category: category.name,
+                                selections: selections // Keep full selection data
                             };
+                            
+                            // Set window.selectedActivity to match
+                            window.selectedActivity = selectedActivity;
                         } else {
                             selectedActivity = null;
+                            window.selectedActivity = null;
                         }
                     } else {
                         // Single choice mode
@@ -966,13 +974,16 @@ function setupDebugClickHandler(timeline) {
         // Create activity data after all variables are defined
         const activityData = {
             id: generateUniqueId(),
-            activity: combinedActivityText,
+            activity: selectedActivity.selections 
+                ? selectedActivity.selections.map(s => s.name).join(' | ')
+                : combinedActivityText,
             category: activityCategory,
             startTime: startMinutes,
             endTime: endMinutes,
             blockLength: parseInt(currentBlock.dataset.length),
             color: selectedActivity?.color || '#808080',
-            count: parseInt(currentBlock.dataset.count) || 1
+            count: selectedActivity?.selections?.length || 1,
+            selections: selectedActivity?.selections || null
         };
         
         // Update both the DOM and timelineManager
