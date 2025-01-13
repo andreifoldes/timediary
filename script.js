@@ -454,12 +454,17 @@ function renderActivities(categories, container = document.getElementById('activ
                         }
                     } else {
                         // Single choice mode
+                        document.querySelectorAll('.activity-button').forEach(b => b.classList.remove('selected'));
                         activityButton.classList.add('selected');
-                        window.selectedActivity = {
+                        
+                        // Set both window.selectedActivity and selectedActivity
+                        const activityData = {
                             name: activity.name,
                             color: activity.color,
                             category: category.name
                         };
+                        window.selectedActivity = activityData;
+                        selectedActivity = activityData;
                         
                         if (DEBUG_MODE) {
                             console.log('Selected activity:', window.selectedActivity);
