@@ -217,6 +217,16 @@ function createBlockAtClickPosition(timeline, startPercent) {
   block.dataset.startRaw = startMins;
   block.dataset.endRaw = endMins;
   block.dataset.length = endMins - startMins;
+
+  // Create text div with proper class
+  const textDiv = document.createElement('div');
+  textDiv.className = getTextDivClass(endMins - startMins);
+  if (window.selectedActivity.selections) {
+    textDiv.innerHTML = window.selectedActivity.selections.map(s => s.name).join('<br>');
+  } else {
+    textDiv.textContent = window.selectedActivity.name;
+  }
+  block.appendChild(textDiv);
   
   block.dataset.start = formatTimeHHMMWithDayOffset(startMins);
   block.dataset.end   = formatTimeHHMMWithDayOffset(endMins);
@@ -311,6 +321,16 @@ function finalizeDragBlock(block, timeline) {
   }
   block.classList.remove('creating');
   block.style.opacity = '1.0';
+
+  // Create text div with proper class
+  const textDiv = document.createElement('div');
+  textDiv.className = getTextDivClass(endMins - startMins);
+  if (window.selectedActivity.selections) {
+    textDiv.innerHTML = window.selectedActivity.selections.map(s => s.name).join('<br>');
+  } else {
+    textDiv.textContent = window.selectedActivity.name;
+  }
+  block.appendChild(textDiv);
 
   // Add label
   const timeLabel = document.createElement('div');
