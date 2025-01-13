@@ -8,7 +8,8 @@ import {
     getCurrentTimelineData,
     getCurrentTimelineKey,
     updateTimeLabel,
-    getTextDivClass
+    getTextDivClass,
+    formatTimeDDMMYYYYHHMM
 } from './utils.js';
 
 export function handleResizeStart(event) {
