@@ -292,7 +292,8 @@ function finalizeDragBlock(block, timeline) {
   let endMins   = snapToInterval(positionToMinutes(styleStart + styleSize));
 
   if (endMins < startMins) {
-    [startMins, endMins] = [endMins, startMins];
+    // We want a next-day block
+    endMins += 1440;
   }
   // If you want a minimum 10-min block:
   if (endMins - startMins < MIN_DURATION_MINUTES) {
@@ -360,8 +361,13 @@ function finalizeDragBlock(block, timeline) {
 /** Snap a given minute count to the nearest 10-min increment. */
 function snapToInterval(minutes) {
   const remainder = minutes % SNAP_INTERVAL;
-  const snapped = remainder < SNAP_INTERVAL / 2
+  let snapped = remainder < SNAP_INTERVAL / 2
     ? minutes - remainder
     : minutes + (SNAP_INTERVAL - remainder);
-  return Math.max(0, Math.min(snapped, 1440));
-}	
+
+  // If we truly want multi-day, remove the clamp or set a higher max if you only want +4h.
+  // return snapped;
+  
+  // If we only want up to 28h (1680 minutes):
+  return Math.max(0, Math.min(snapped, 1680));
+}
