@@ -231,8 +231,12 @@ function updateActivityData(target) {
 
 function validateTimelineAfterUpdate(target, activityData) {
     try {
-        const timelineKey = target.dataset.timelineKey;
-        window.timelineManager.metadata[timelineKey].validate();
+        const timelineKey = getCurrentTimelineKey();
+        if (window.timelineManager.metadata[timelineKey]) {
+            window.timelineManager.metadata[timelineKey].validate();
+        } else {
+            console.warn('Timeline metadata not found for key:', timelineKey);
+        }
     } catch (error) {
         console.error('Timeline validation failed:', error);
         revertActivityBlock(target, activityData);
