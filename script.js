@@ -761,7 +761,8 @@ function setupDebugClickHandler(timeline) {
             return;
         }
         
-        // Ensure we're working with the current timeline data
+        // Get current timeline key and ensure we're working with current timeline data
+        const currentKey = getCurrentTimelineKey();
         window.timelineManager.activities[currentKey] = getCurrentTimelineData();
 
         const rect = targetTimeline.getBoundingClientRect();
@@ -975,7 +976,6 @@ function setupDebugClickHandler(timeline) {
         
         // Update both the DOM and timelineManager
         currentBlock.dataset.id = activityData.id;
-        const currentKey = getCurrentTimelineKey();
         
         // Ensure the activities array exists for this timeline
         if (!window.timelineManager.activities[currentKey]) {
