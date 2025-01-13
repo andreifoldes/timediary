@@ -9,12 +9,26 @@ import {
     createModal,
     createFloatingAddButton,
     scrollToActiveTimeline,
-    validateMinCoverage
+    validateMinCoverage,
+    formatTimeDDMMYYYYHHMM,
+    formatTimeHHMM,
+    timeToMinutes,
+    findNearestMarkers,
+    minutesToPercentage,
+    positionToMinutes,
+    calculateMinimumBlockWidth,
+    hasOverlap,
+    canPlaceActivity,
+    isTimelineFull,
+    isOverlapping,
+    generateUniqueId,
+    createTimeLabel,
+    updateTimeLabel
 } from './utils.js';
 import { updateIsMobile, getIsMobile } from './globals.js';
 let selectedActivity = null;
 
-// Single timeline management object
+// Remove duplicate import since it's now included above
 window.timelineManager = {
     metadata: {}, // Timeline metadata (former timelines object)
     activities: {}, // Timeline activities (former timelineData object)
@@ -41,22 +55,6 @@ const TIMELINE_START_HOUR = 4;
 const TIMELINE_HOURS = 24;
 
 const DEBUG_MODE = true; // Enable debug mode
-import { 
-    formatTimeDDMMYYYYHHMM,
-    formatTimeHHMM,
-    timeToMinutes,
-    findNearestMarkers,
-    minutesToPercentage,
-    positionToMinutes,
-    calculateMinimumBlockWidth,
-    hasOverlap,
-    canPlaceActivity,
-    isTimelineFull,
-    isOverlapping,
-    generateUniqueId,
-    createTimeLabel,
-    updateTimeLabel
-} from './utils.js';
 
 
 // Function to add next timeline
