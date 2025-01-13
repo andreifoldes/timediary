@@ -1,4 +1,5 @@
 import { getIsMobile } from './globals.js';
+import { initBlockCreationByDrag } from './activity_creation.js';
 import { 
     timeToMinutes,
     formatTimeHHMM,
