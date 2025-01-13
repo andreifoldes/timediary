@@ -28,9 +28,20 @@ export function initBlockCreationByDrag(timeline) {
   let startPercent = 0;         // [0..100+]
   let previewBlock = null;
 
+  if (DEBUG_MODE) console.log('Initializing drag creation for timeline:', timeline);
+
   timeline.addEventListener('mousedown', (e) => {
+    if (DEBUG_MODE) console.log('Mouse down event:', {
+      selectedActivity: window.selectedActivity,
+      targetIsBlock: !!e.target.closest('.activity-block'),
+      target: e.target
+    });
+
     // If no activity is selected, or we clicked an existing block, bail
-    if (!window.selectedActivity || e.target.closest('.activity-block')) return;
+    if (!window.selectedActivity || e.target.closest('.activity-block')) {
+      if (DEBUG_MODE) console.log('Ignoring mousedown - no activity selected or clicked existing block');
+      return;
+    }
 
     isMouseDown = true;
     const rect = timeline.getBoundingClientRect();
@@ -38,10 +49,12 @@ export function initBlockCreationByDrag(timeline) {
       startY = e.clientY - rect.top;
       startY = Math.max(0, Math.min(startY, rect.height));
       startPercent = (startY / rect.height) * 100;
+      if (DEBUG_MODE) console.log('Mobile drag start:', { startY, startPercent });
     } else {
       startX = e.clientX - rect.left;
       startX = Math.max(0, Math.min(startX, rect.width));
       startPercent = (startX / rect.width) * 100;
+      if (DEBUG_MODE) console.log('Desktop drag start:', { startX, startPercent });
     }
 
     // Create a small 'preview' block, but width/height=0 for now
@@ -72,7 +85,11 @@ export function initBlockCreationByDrag(timeline) {
   });
 
   timeline.addEventListener('mousemove', (e) => {
-    if (!isMouseDown || !previewBlock) return;
+    if (!isMouseDown || !previewBlock) {
+      if (DEBUG_MODE && isMouseDown) console.log('Mouse move ignored - no preview block');
+      return;
+    }
+    if (DEBUG_MODE) console.log('Mouse move event:', { isMouseDown, hasPreviewBlock: !!previewBlock });
 
     const rect = timeline.getBoundingClientRect();
     let currentPercent;
@@ -109,10 +126,18 @@ export function initBlockCreationByDrag(timeline) {
   });
 
   timeline.addEventListener('mouseup', (e) => {
-    if (!isMouseDown) return;
+    if (DEBUG_MODE) console.log('Mouse up event:', { isMouseDown, hasPreviewBlock: !!previewBlock });
+    
+    if (!isMouseDown) {
+      if (DEBUG_MODE) console.log('Mouse up ignored - not dragging');
+      return;
+    }
     isMouseDown = false;
     
-    if (!previewBlock) return;
+    if (!previewBlock) {
+      if (DEBUG_MODE) console.log('Mouse up ignored - no preview block');
+      return;
+    }
 
     // 1) Determine how far user actually moved (in pixels)
     const rect = timeline.getBoundingClientRect();
