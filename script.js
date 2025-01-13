@@ -217,12 +217,32 @@ async function addNextTimeline() {
     }
 }
 
-function updateDebugOverlay() {
-    // Debug overlay disabled
+function updateDebugOverlay(mouseX, timelineRect) {
+    if (!DEBUG_MODE) return;
+    
+    const overlay = document.getElementById('debugOverlay');
+    if (!overlay) return;
+
+    const relativeX = mouseX - timelineRect.left;
+    const percentageX = (relativeX / timelineRect.width) * 100;
+    const minutes = positionToMinutes(percentageX);
+    const time = formatTimeHHMM(minutes);
+
+    overlay.style.display = 'block';
+    overlay.innerHTML = `
+        Position: ${percentageX.toFixed(2)}%<br>
+        Minutes: ${minutes}<br>
+        Time: ${time}
+    `;
 }
 
 function hideDebugOverlay() {
-    // Debug overlay disabled
+    if (!DEBUG_MODE) return;
+    
+    const overlay = document.getElementById('debugOverlay');
+    if (overlay) {
+        overlay.style.display = 'none';
+    }
 }
 
 function logDebugInfo() {
