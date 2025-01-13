@@ -43,10 +43,10 @@ const CLICK_DELAY = 300; // Minimum delay between clicks in milliseconds
 
 let selectedActivity = null;
 
-// Remove duplicate import since it's now included above
+// Initialize timelineManager.activities with dynamic category keys
 window.timelineManager = {
     metadata: {}, // Timeline metadata (former timelines object)
-    activities: {}, // Timeline activities (former timelineData object)
+    activities: {}, // Will be populated dynamically based on timeline categories
     initialized: new Set(), // Tracks initialized timelines
     activeTimeline: document.getElementById('primary'), // Initialize with primary timeline
     keys: [], // Available timeline keys
@@ -81,6 +81,12 @@ export async function addNextTimeline() {
         // Load next timeline data
         const categories = await fetchActivities(nextTimelineKey);
         
+        // Dynamically initialize activities categories
+        window.timelineManager.activities[nextTimelineKey] = {};
+        categories.forEach(category => {
+            window.timelineManager.activities[nextTimelineKey][category.name.toLowerCase()] = [];
+        });
+
         const isMobile = getIsMobile();
         
         // Update UI for next timeline with animation
@@ -762,7 +768,7 @@ function setupDebugClickHandler(timeline) {
         }
         
         // Ensure we're working with current timeline data
-        const timelineKey = getCurrentTimelineKey();
+        let timelineKey = getCurrentTimelineKey();
         window.timelineManager.activities[timelineKey] = getCurrentTimelineData();
 
         const rect = targetTimeline.getBoundingClientRect();
@@ -931,9 +937,6 @@ function setupDebugClickHandler(timeline) {
         // Hide time labels for all existing blocks in current timeline
         const currentKey = getCurrentTimelineKey();
         const currentActivities = window.timelineManager.activities[currentKey] || [];
-        // Hide time labels for all existing blocks in current timeline
-        const timelineKey = getCurrentTimelineKey();
-        const currentActivities = window.timelineManager.activities[timelineKey] || [];
         currentActivities.forEach(activity => {
             const existingBlock = activitiesContainer.querySelector(`.activity-block[data-id="${activity.id}"]`);
             if (existingBlock) {
@@ -988,6 +991,9 @@ function setupDebugClickHandler(timeline) {
         // Add the activity to the timeline manager
         window.timelineManager.activities[timelineKey].push(activityData);
         
+        // Ensure button states are updated
+        updateButtonStates();
+        
         if (DEBUG_MODE) {
             console.log('Added activity to timelineManager:', {
                 timelineKey: currentKey,
@@ -998,7 +1004,7 @@ function setupDebugClickHandler(timeline) {
 
         // Validate timeline after adding activity
         try {
-            const timelineKey = currentBlock.dataset.timelineKey;
+            timelineKey = currentBlock.dataset.timelineKey;
             window.timelineManager.metadata[timelineKey].validate();
         } catch (error) {
             console.error('Timeline validation failed:', error);
