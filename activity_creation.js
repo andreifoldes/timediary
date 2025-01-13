@@ -249,7 +249,15 @@ function createBlockAtClickPosition(timeline, startPercent) {
   timeLabel.className = 'time-label';
   block.appendChild(timeLabel);
   
-  timeline.appendChild(block);
+  // Get or create activities container
+  let activitiesContainer = timeline.querySelector('.activities');
+  if (!activitiesContainer) {
+    activitiesContainer = document.createElement('div');
+    activitiesContainer.className = 'activities';
+    timeline.appendChild(activitiesContainer);
+  }
+  
+  activitiesContainer.appendChild(block);
   
   // Update label after block is in DOM
   updateTimeLabel(timeLabel, block.dataset.start, block.dataset.end, block);
@@ -308,6 +316,16 @@ function finalizeDragBlock(block, timeline) {
   const timeLabel = document.createElement('div');
   timeLabel.className = 'time-label';
   block.appendChild(timeLabel);
+  
+  // Get or create activities container
+  let activitiesContainer = timeline.querySelector('.activities');
+  if (!activitiesContainer) {
+    activitiesContainer = document.createElement('div');
+    activitiesContainer.className = 'activities';
+    timeline.appendChild(activitiesContainer);
+  }
+  
+  activitiesContainer.appendChild(block);
   
   // Update label after block is in DOM
   updateTimeLabel(timeLabel, block.dataset.start, block.dataset.end, block);
