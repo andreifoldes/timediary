@@ -978,12 +978,12 @@ function setupDebugClickHandler(timeline) {
         currentBlock.dataset.id = activityData.id;
         
         // Ensure the activities array exists for this timeline
-        if (!window.timelineManager.activities[currentKey]) {
-            window.timelineManager.activities[currentKey] = [];
+        if (!window.timelineManager.activities[timelineKey]) {
+            window.timelineManager.activities[timelineKey] = [];
         }
         
         // Add the activity to the timeline manager
-        window.timelineManager.activities[currentKey].push(activityData);
+        window.timelineManager.activities[timelineKey].push(activityData);
         
         if (DEBUG_MODE) {
             console.log('Added activity to timelineManager:', {
