@@ -247,6 +247,35 @@ export function generateUniqueId() {
     return Math.random().toString(36).substr(2, 9);
 }
 
+export function formatTimeHHMMWithDayOffset(totalMinutes) {
+    // Keep track of how many days have passed:
+    let dayOffset = 0;
+  
+    // Subtract 1440 (24*60) until totalMinutes < 1440
+    while (totalMinutes >= 1440) {
+      totalMinutes -= 1440;
+      dayOffset++;
+    }
+  
+    // Now totalMinutes is in [0..1439], i.e. within one day
+    const hh = Math.floor(totalMinutes / 60);
+    const mm = totalMinutes % 60;
+  
+    // Format hh and mm with leading zeros (00–23:00–59)
+    const hhStr = hh.toString().padStart(2, '0');
+    const mmStr = mm.toString().padStart(2, '0');
+  
+    let result = `${hhStr}:${mmStr}`;
+  
+    // If dayOffset > 0, append “(+1 day)” or “(+2 days)”
+    if (dayOffset > 0) {
+      result += ` (+${dayOffset} day${dayOffset > 1 ? 's' : ''})`;
+    }
+  
+    return result;
+  }
+  
+
 export function formatTimeDDMMYYYYHHMM(startTime, endTime) {
     const today = new Date();
     const yesterday = new Date(today);
