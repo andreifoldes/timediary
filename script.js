@@ -1212,7 +1212,7 @@ function updateButtonStates() {
     // Get current timeline coverage
     const currentKey = getCurrentTimelineKey();
     const currentTimeline = window.timelineManager.metadata[currentKey];
-    const currentCoverage = window.getTimelineCoverage();
+    const currentCoverage = getTimelineCoverage();
         
     // Get minimum coverage requirement for current timeline
     const minCoverage = parseInt(currentTimeline.minCoverage) || 0;

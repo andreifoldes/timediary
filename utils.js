@@ -25,8 +25,9 @@ export function getCurrentTimelineData() {
     return window.timelineManager.activities[currentKey] || [];
 }
 
-// Make getCurrentTimelineData available globally
+// Make functions available globally
 window.getCurrentTimelineData = getCurrentTimelineData;
+window.getTimelineCoverage = getTimelineCoverage;
 
 // Function to scroll to active timeline
 export function scrollToActiveTimeline() {
