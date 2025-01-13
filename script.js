@@ -81,11 +81,8 @@ export async function addNextTimeline() {
         // Load next timeline data
         const categories = await fetchActivities(nextTimelineKey);
         
-        // Dynamically initialize activities categories
-        window.timelineManager.activities[nextTimelineKey] = {};
-        categories.forEach(category => {
-            window.timelineManager.activities[nextTimelineKey][category.name.toLowerCase()] = [];
-        });
+        // Initialize activities array for this timeline if not exists
+        window.timelineManager.activities[nextTimelineKey] = window.timelineManager.activities[nextTimelineKey] || [];
 
         const isMobile = getIsMobile();
         
@@ -174,8 +171,6 @@ export async function addNextTimeline() {
         }
 
 
-        // Initialize activities array if not exists
-        window.timelineManager.activities[nextTimelineKey] = window.timelineManager.activities[nextTimelineKey] || [];
 
         // Scroll to active timeline in mobile view
         if (getIsMobile()) {
@@ -983,10 +978,6 @@ function setupDebugClickHandler(timeline) {
         // Update both the DOM and timelineManager
         currentBlock.dataset.id = activityData.id;
         
-        // Ensure the activities array exists for this timeline
-        if (!window.timelineManager.activities[timelineKey]) {
-            window.timelineManager.activities[timelineKey] = [];
-        }
         
         // Add the activity to the timeline manager
         window.timelineManager.activities[timelineKey].push(activityData);
