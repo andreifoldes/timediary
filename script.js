@@ -731,20 +731,21 @@ function initTimelineInteraction(timeline) {
                         const rawStartMinutes = positionToMinutes(rawLeft);
                         endMinutes = timeToMinutes(target.dataset.end);
                         
+                        // Calculate the nearest 10-minute interval for the raw start minutes
+                        startMinutes = Math.round(rawStartMinutes / 10) * 10;
+                        
                         // Normalize times for comparison (shift times after midnight)
                         let normalizedEnd = endMinutes < 240 ? endMinutes + 1440 : endMinutes;
-                        let normalizedStart = rawStartMinutes < 240 ? rawStartMinutes + 1440 : rawStartMinutes;
+                        let normalizedStart = startMinutes < 240 ? startMinutes + 1440 : startMinutes;
                         
                         // If dragging past the end time, stop at the end time minus 10 minutes
                         if (normalizedStart > normalizedEnd) {
                             normalizedStart = normalizedEnd - 10;
+                            startMinutes = normalizedStart >= 1440 ? normalizedStart - 1440 : normalizedStart;
                         }
                         
-                        // Round to nearest 10-minute interval
-                        startMinutes = Math.round(normalizedStart / 10) * 10;
-                        
                         // Special case for 04:00
-                        if (startMinutes >= 245) {
+                        if (startMinutes >= 240) {
                             startMinutes = 240;
                         }
                         
