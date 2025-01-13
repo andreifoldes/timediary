@@ -524,6 +524,13 @@ export function isOverlapping(elem1, elem2) {
     );
 }
 
+export function getTextDivClass(length) {
+    if (getIsMobile()) {
+        return length >= 60 ? 'activity-block-text-narrow wide resized' : 'activity-block-text-narrow';
+    }
+    return length >= 60 ? 'activity-block-text-narrow wide resized' : 'activity-block-text-vertical';
+}
+
 
 
 // Button and UI state management functions
