@@ -40,9 +40,10 @@ const TIMELINE_HOURS = 24;
 
 const DEBUG_MODE = true; // Enable debug mode
 
+
 let selectedActivity = null;
 
-// Initialize timelineManager with unique properties
+// Remove duplicate import since it's now included above
 window.timelineManager = {
     metadata: {}, // Timeline metadata (former timelines object)
     activities: {}, // Timeline activities (former timelineData object)
@@ -53,15 +54,15 @@ window.timelineManager = {
     study: {} // Store URL parameters
 };
 
-// Populate study parameters if URL parameters exist
+// Only create and populate study parameters if URL parameters exist
 const urlParams = new URLSearchParams(window.location.search);
-if (urlParams.toString()) {
+if(urlParams.toString()) {
     for (const [key, value] of urlParams) {
         window.timelineManager.study[key] = value;
     }
 }
 
-// Function to add the next timeline
+// Function to add next timeline
 async function addNextTimeline() {
     if (DEBUG_MODE) {
         console.log(`Current timeline data saved:`, window.timelineManager.activities);
@@ -165,6 +166,7 @@ async function addNextTimeline() {
             activitiesContainer.className = 'activities';
             window.timelineManager.activeTimeline.appendChild(activitiesContainer);
         }
+
 
         // Initialize activities array if not exists
         window.timelineManager.activities[nextTimelineKey] = window.timelineManager.activities[nextTimelineKey] || [];
@@ -667,86 +669,246 @@ function initTimeline(timeline) {
     }
 }
 
+
 function initTimelineInteraction(timeline) {
     if (!timeline) {
         console.error('Timeline must be provided to initTimelineInteraction');
         return;
     }
     const targetTimeline = timeline;
-
+    
     // Initialize interact.js resizable
     interact('.activity-block').resizable({
-        edges: { left: true, right: true }, // Enable left and right edges for desktop
+        onstart: function(event) {
+            // Store original values before resize
+            const target = event.target;
+            target.dataset.originalStart = target.dataset.start;
+            target.dataset.originalEnd = target.dataset.end;
+            target.dataset.originalLength = target.dataset.length;
+            target.dataset.originalHeight = target.dataset.height;
+
+        },
+        edges: { left: !getIsMobile(), right: !getIsMobile(), bottom: getIsMobile() },
         modifiers: [
             interact.modifiers.restrictEdges({
-                outer: '.timeline',
-                endOnly: true
+                outer: '.timeline'
             }),
             interact.modifiers.restrictSize({
-                min: { width: 50 }, // Minimum width in pixels
-                max: { width: 1000 } // Maximum width in pixels
+                min: { width: 10, height: 10 }
             })
         ],
         inertia: false,
-        listeners: {
-            start: handleResizeStart,
-            move: handleResizeMove.bind(null, targetTimeline),
-            end: handleResizeEnd
-        }
-    }).draggable({
-        inertia: false,
-        modifiers: [
-            interact.modifiers.restrictRect({
-                restriction: '.timeline',
-                endOnly: true
-            })
-        ],
         listeners: {
             start(event) {
-                event.target.classList.add('dragging');
+                event.target.classList.add('resizing');
             },
             move(event) {
                 const target = event.target;
                 const timelineRect = targetTimeline.getBoundingClientRect();
                 
-                // Get current position
-                let currentLeft = parseFloat(target.style.left) || 0;
+                let newSize, startTime, startMinutes, endMinutes, newWidth;
+                const isMobile = getIsMobile();
                 
-                // Update position based on drag delta
-                let newLeft = currentLeft + (event.dx / timelineRect.width * 100);
-                
-                // Ensure we stay within timeline bounds
-                newLeft = Math.max(0, Math.min(newLeft, 100 - parseFloat(target.style.width)));
-                
-                // Update position
-                target.style.left = `${newLeft}%`;
-                
-                // Calculate and update times
-                const startMinutes = positionToMinutes(newLeft);
-                const endMinutes = startMinutes + (parseFloat(target.dataset.length) || DEFAULT_ACTIVITY_LENGTH);
-                
-                if (startMinutes !== null && endMinutes !== null) {
-                    const startTime = formatTimeHHMM(startMinutes);
-                    const endTime = formatTimeHHMM(endMinutes);
+                if (isMobile) {
+                    // Mobile: Calculate height in percentage
+                    let newHeight = (event.rect.height / timelineRect.height) * 100;
+                    const tenMinutesHeight = (10 / (24 * 60)) * 100;
+                    const intervals = Math.round(newHeight / tenMinutesHeight);
+                    newSize = intervals * tenMinutesHeight;
+                    newSize = Math.max(tenMinutesHeight, Math.min(newSize, 100));
+                    newWidth = newSize; // Set newWidth for time label calculations
                     
-                    // Update dataset
-                    target.dataset.start = startTime;
-                    target.dataset.end = endTime;
+                    startTime = target.dataset.start;
+                    startMinutes = timeToMinutes(startTime);
+                    endMinutes = positionToMinutes(parseFloat(target.style.top) + newSize);
+                } else {
+                    // Desktop: Calculate width in percentage
+                    const isLeftEdge = event.edges.left;
 
-                    // Update time label
-                    const timeLabel = target.querySelector('.time-label');
-                    if (timeLabel) {
-                        updateTimeLabel(timeLabel, startTime, endTime, target);
+                    if (isLeftEdge) {
+                        // When dragging left edge, update start time and keep end time
+                        const rawLeft = parseFloat(event.rect.left) / timelineRect.width * 100;
+                        const rawStartMinutes = positionToMinutes(rawLeft);
+                        endMinutes = timeToMinutes(target.dataset.end);
+                        
+                        // Calculate the nearest 10-minute interval for the raw start minutes
+                        startMinutes = Math.round(rawStartMinutes / 10) * 10;
+                        
+                        // Normalize times for comparison (shift times after midnight)
+                        let normalizedEnd = endMinutes < 240 ? endMinutes + 1440 : endMinutes;
+                        let normalizedStart = startMinutes < 240 ? startMinutes + 1440 : startMinutes;
+                        
+                        // If dragging past the end time, stop at the end time minus 10 minutes
+                        if (normalizedStart > normalizedEnd) {
+                            normalizedStart = normalizedEnd - 10;
+                            startMinutes = normalizedStart >= 1440 ? normalizedStart - 1440 : normalizedStart;
+                        }
+                        
+                        // Special case for 04:00
+                        if (startMinutes <= 245) {
+                            startMinutes = 240;
+                        }
+                        
+                        // Ensure minimum 10-minute difference
+                        const timeDiff = normalizedEnd - startMinutes;
+                        if (timeDiff < 10) {
+                            startMinutes = normalizedEnd - 10;
+                        }
+                        
+                        // Normalize back to 0-1440 range
+                        if (startMinutes >= 1440) {
+                            startMinutes -= 1440;
+                        }
+                        
+                        // Calculate position and width
+                        const finalLeft = minutesToPercentage(startMinutes);
+                        newSize = ((endMinutes - startMinutes) / (24 * 60)) * 100;
+                        
+                        // Update block position and size
+                        target.style.left = `${finalLeft}%`;
+                        target.style.width = `${newSize}%`;
+                        
+                        // Update start time in dataset
+                        const newStartTime = formatTimeHHMM(startMinutes);
+                        target.dataset.start = newStartTime;
+                        
+                        // Update time label immediately for left edge
+                        const timeLabel = target.querySelector('.time-label');
+                        if (timeLabel) {
+                            updateTimeLabel(timeLabel, newStartTime, target.dataset.end, target);
+                        }
+                        
+                        // Set newWidth for consistency
+                        newWidth = newSize;
+                    } else {
+                        // When dragging right edge, keep start time and update end
+                        newWidth = (event.rect.width / timelineRect.width) * 100;
+                        const tenMinutesWidth = (10 / (24 * 60)) * 100;
+                        const intervals = Math.round(newWidth / tenMinutesWidth);
+                        newSize = intervals * tenMinutesWidth;
+                        newSize = Math.max(tenMinutesWidth, Math.min(newSize, 100));
+                        
+                        startTime = target.dataset.start;
+                        startMinutes = timeToMinutes(startTime);
+                        endMinutes = positionToMinutes(parseFloat(target.style.left) + newSize);
+                        
+                        // Update width for right edge
+                        target.style.width = `${newSize}%`;
+                    }
+                }
+                
+                if (!canPlaceActivity(startMinutes, endMinutes, target.dataset.id)) {
+                    target.classList.add('invalid');
+                    setTimeout(() => target.classList.remove('invalid'), 400);
+                    return;
+                }
+                
+                // Only update size for mobile or right edge desktop drag
+                if (isMobile) {
+                    target.style.height = `${newSize}%`;
+                    newWidth = newSize; // For time label calculations
+                }
+
+                // Update time label
+                const timeLabel = target.querySelector('.time-label');
+                if (timeLabel) {
+                    const startTime = target.dataset.start;
+                    const startMinutes = timeToMinutes(startTime);
+                    let endMinutes;
+                    let newWidth = newSize; // Ensure newWidth is defined for time label calculations
+                        
+                    if (isMobile) {
+                        endMinutes = positionToMinutes((parseFloat(target.style.top) + newWidth));
+                        // If the position is at the end of timeline (100%), set to 04:00
+                        if (parseFloat(target.style.top) + newWidth >= 100) {
+                            endMinutes = 240; // 04:00 in minutes
+                        }
+                    } else {
+                        endMinutes = positionToMinutes((parseFloat(target.style.left) + newWidth));
+                        // If the position is at the end of timeline (100%), set to 04:00
+                        if (parseFloat(target.style.left) + newWidth >= 100) {
+                            endMinutes = 240; // 04:00 in minutes
+                        }
+                    }
+                    const endTime = formatTimeHHMM(endMinutes);
+                    updateTimeLabel(timeLabel, startTime, endTime, target);
+                            
+                    // Update the end time and length in the dataset using calculateTimeDifference
+                    target.dataset.end = endTime;
+                    const newLength = calculateTimeDifference(startTime, endTime);
+                    target.dataset.length = newLength;
+                    
+                    // Update text class based on length and mode
+                    const textDiv = target.querySelector('div[class^="activity-block-text"]');
+                    if (textDiv) {
+                        textDiv.className = getIsMobile()
+                            ? (newLength >= 60 ? 'activity-block-text-narrow wide resized' : 'activity-block-text-narrow')
+                            : (newLength >= 60 ? 'activity-block-text-narrow wide resized' : 'activity-block-text-vertical');
+                    }
+                    
+                    // Update the activity data in timelineManager
+                    const activityId = target.dataset.id;
+                    const currentData = getCurrentTimelineData();
+                    const activityIndex = currentData.findIndex(activity => activity.id === activityId);
+                    
+                    if (activityIndex !== -1) {
+                        const times = formatTimeDDMMYYYYHHMM(formatTimeHHMM(startMinutes), formatTimeHHMM(endMinutes));
+                        if (!times.startTime || !times.endTime) {
+                            throw new Error('Activity start time and end time must be defined');
+                        }
+                        currentData[activityIndex].startTime = times.startTime;
+                        currentData[activityIndex].endTime = times.endTime;
+                        currentData[activityIndex].blockLength = parseInt(target.dataset.length);
+                        
+                        // Validate timeline after resizing activity
+                        try {
+                            const timelineKey = event.target.dataset.timelineKey;
+                            window.timelineManager.metadata[timelineKey].validate();
+                        } catch (error) {
+                            console.error('Timeline validation failed:', error);
+                            // Revert the change
+                            const originalTimes = formatTimeDDMMYYYYHHMM(target.dataset.originalStart, target.dataset.originalEnd);
+                            currentData[activityIndex].startTime = originalTimes.startTime;
+                            currentData[activityIndex].endTime = originalTimes.endTime;
+                            currentData[activityIndex].blockLength = parseInt(target.dataset.originalLength);
+                            const block = document.createElement('div');
+                            block.className = 'activity-block invalid';
+                            block.style.backgroundColor = currentBlock.style.backgroundColor;
+                            block.style.width = currentBlock.style.width;
+                            block.style.height = currentBlock.style.height;
+                            block.style.top = currentBlock.style.top;
+                            block.style.left = currentBlock.style.left;
+                            targetTimeline.appendChild(block);
+                            setTimeout(() => block.remove(), 400);
+                            return;
+                        }
+
+                        if (DEBUG_MODE) {
+                            console.log('Updated activity data:', currentData[activityIndex]);
+                        }
                     }
                 }
             },
             end(event) {
-                event.target.classList.remove('dragging');
+                event.target.classList.remove('resizing');
+                const textDiv = event.target.querySelector('div[class^="activity-block-text"]');
+                const timeLabel = event.target.querySelector('.time-label');
+                if (timeLabel) {
+                    timeLabel.style.display = 'block'; // Ensure time label stays visible after resize
+                }
+                if (textDiv) {
+                    // Get the current length from the block's dataset
+                    const length = parseInt(event.target.dataset.length);
+                    // Update classes based on length and mode
+                    textDiv.className = getIsMobile()
+                        ? (length >= 60 ? 'activity-block-text-narrow wide resized' : 'activity-block-text-narrow')
+                        : (length >= 60 ? 'activity-block-text-narrow wide resized' : 'activity-block-text-vertical');
+                }
                 updateButtonStates();
             }
         }
     });
-
+    
     // Add click handling with debounce
     let lastClickTime = 0;
     const CLICK_DELAY = 300; // milliseconds
@@ -754,752 +916,249 @@ function initTimelineInteraction(timeline) {
     targetTimeline.addEventListener('click', (e) => {
         // Only process clicks on the active timeline
         if (!targetTimeline || targetTimeline !== window.timelineManager.activeTimeline) return;
-
+        
         // Prevent double-clicks
-        const currentTime = Date.now();
+        const currentTime = new Date().getTime();
         if (currentTime - lastClickTime < CLICK_DELAY) return;
         lastClickTime = currentTime;
 
         if (!selectedActivity || e.target.closest('.activity-block')) return;
+        
+        const currentKey = getCurrentTimelineKey();
+        // Check if timeline is full before proceeding
+        if (isTimelineFull()) {
+            const block = document.createElement('div');
+            block.className = 'activity-block invalid';
+            setTimeout(() => block.remove(), 400); // Remove after animation
+            return;
+        }
+        
+        // Ensure we're working with the current timeline data
+        window.timelineManager.activities[currentKey] = getCurrentTimelineData();
 
-        handleTimelineClick(e, targetTimeline);
-    });
-}
-
-/**
- * Handles the start of a resize event.
- * Stores the original state of the activity block.
- */
-function handleResizeStart(event) {
-    const target = event.target;
-    target.dataset.originalStart = target.dataset.start;
-    target.dataset.originalEnd = target.dataset.end;
-    target.dataset.originalLength = target.dataset.length;
-    target.dataset.originalHeight = target.dataset.height;
-    target.classList.add('resizing');
-}
-
-/**
- * Handles the move event during resizing.
- * @param {HTMLElement} targetTimeline - The timeline element being interacted with.
- * @param {Object} event - The interact.js event object.
- */
-function handleResizeMove(targetTimeline, event) {
-    const target = event.target;
-    const timelineRect = targetTimeline.getBoundingClientRect();
-    const isMobile = getIsMobile();
-    const isLeftEdge = event.edges.left;
-    const timelineKey = target.dataset.timelineKey;
-
-    try {
-        if (isLeftEdge) {
-            handleLeftEdgeResize(target, event, timelineRect, isMobile, timelineKey);
+        const rect = targetTimeline.getBoundingClientRect();
+        const isMobile = getIsMobile();
+        let clickPositionPercent;
+        
+        if (isMobile) {
+            const y = e.clientY - rect.top;
+            const clampedY = Math.max(0, Math.min(y, rect.height));
+            clickPositionPercent = (clampedY / rect.height) * 100;
         } else {
-            handleRightEdgeResize(target, event, timelineRect, isMobile, timelineKey);
+            const x = e.clientX - rect.left;
+            const clampedX = Math.max(0, Math.min(x, rect.width));
+            clickPositionPercent = (clampedX / rect.width) * 100;
         }
-    } catch (error) {
-        console.error('Resize handling failed:', error);
-        provideUserFeedback(target, 'Invalid resize action.');
-    }
-}
-
-/**
- * Handles the end of a resize event.
- * Cleans up any temporary states or classes.
- */
-function handleResizeEnd(event) {
-    const target = event.target;
-    target.classList.remove('resizing');
-    const textDiv = target.querySelector('div[class^="activity-block-text"]');
-    const timeLabel = target.querySelector('.time-label');
-
-    if (timeLabel) {
-        timeLabel.style.display = 'block'; // Ensure time label stays visible after resize
-    }
-
-    if (textDiv) {
-        // Get the current length from the block's dataset
-        const length = parseInt(target.dataset.length, 10);
-        // Update classes based on length and mode
-        textDiv.className = getIsMobile()
-            ? (length >= 60 ? 'activity-block-text-narrow wide resized' : 'activity-block-text-narrow')
-            : (length >= 60 ? 'activity-block-text-narrow wide resized' : 'activity-block-text-vertical');
-    }
-
-    updateButtonStates();
-}
-
-/**
- * Handles resizing when the left edge is dragged.
- * @param {HTMLElement} target - The activity block being resized.
- * @param {Object} event - The interact.js event object.
- * @param {DOMRect} timelineRect - The bounding rectangle of the timeline.
- * @param {boolean} isMobile - Flag indicating if the device is mobile.
- * @param {string} timelineKey - The key of the current timeline.
- */
-function handleLeftEdgeResize(target, event, timelineRect, isMobile, timelineKey) {
-    const rawLeftPercent = parseFloat(target.style.left) || 0;
-    const rawStartMinutes = positionToMinutes(rawLeftPercent);
-    let endMinutes = timeToMinutes(target.dataset.end);
-
-    // Prevent dragging start past end
-    let potentialStartMinutes = Math.min(rawStartMinutes, endMinutes);
-
-    // Round to nearest INCREMENT_MINUTES interval
-    potentialStartMinutes = Math.round(potentialStartMinutes / INCREMENT_MINUTES) * INCREMENT_MINUTES;
-
-    // Handle wrap-around if needed
-    if (potentialStartMinutes < 0) {
-        potentialStartMinutes += MINUTES_PER_DAY;
-    }
-
-    // Calculate new size
-    let adjustedEndMinutes = endMinutes;
-    if (endMinutes < potentialStartMinutes) {
-        adjustedEndMinutes += MINUTES_PER_DAY;
-    }
-    const newSizePercent = ((adjustedEndMinutes - potentialStartMinutes) / MINUTES_PER_DAY) * 100;
-
-    // Validate placement
-    if (!canPlaceActivity(potentialStartMinutes, endMinutes, target.dataset.id)) {
-        provideUserFeedback(target, 'Cannot resize to this time.');
-        return;
-    }
-
-    // Update block position and size
-    target.style.left = `${minutesToPercentage(potentialStartMinutes)}%`;
-    target.style.width = `${newSizePercent}%`;
-
-    // Update dataset
-    const newStartTime = formatTimeHHMM(potentialStartMinutes % MINUTES_PER_DAY);
-    target.dataset.start = newStartTime;
-    target.dataset.length = adjustedEndMinutes - potentialStartMinutes;
-
-    // Update time label
-    const timeLabel = target.querySelector('.time-label');
-    if (timeLabel) {
-        updateTimeLabel(timeLabel, newStartTime, target.dataset.end, target);
-    }
-
-    // Update activity data in timelineManager
-    updateTimelineManager(target, potentialStartMinutes, endMinutes, timelineKey);
-}
-
-/**
- * Handles resizing when the right edge is dragged.
- * @param {HTMLElement} target - The activity block being resized.
- * @param {Object} event - The interact.js event object.
- * @param {DOMRect} timelineRect - The bounding rectangle of the timeline.
- * @param {boolean} isMobile - Flag indicating if the device is mobile.
- * @param {string} timelineKey - The key of the current timeline.
- */
-function handleRightEdgeResize(target, event, timelineRect, isMobile, timelineKey) {
-    const rawWidthPercent = parseFloat(target.style.width) || 0;
-    const startMinutes = timeToMinutes(target.dataset.start);
-    let endMinutes = positionToMinutes(rawWidthPercent + parseFloat(target.style.left));
-
-    // Round to nearest INCREMENT_MINUTES interval
-    endMinutes = Math.round(endMinutes / INCREMENT_MINUTES) * INCREMENT_MINUTES;
-
-    // Handle wrap-around if needed
-    if (endMinutes < startMinutes) {
-        endMinutes += MINUTES_PER_DAY;
-    }
-
-    // Validate placement
-    if (!canPlaceActivity(startMinutes, endMinutes, target.dataset.id)) {
-        provideUserFeedback(target, 'Cannot resize to this time.');
-        return;
-    }
-
-    // Calculate new size
-    const newSizePercent = ((endMinutes - startMinutes) / MINUTES_PER_DAY) * 100;
-
-    // Update block size
-    target.style.width = `${newSizePercent}%`;
-
-    // Update dataset
-    const newEndTime = formatTimeHHMM(endMinutes % MINUTES_PER_DAY);
-    target.dataset.end = newEndTime;
-    target.dataset.length = endMinutes - startMinutes;
-
-    // Update time label
-    const timeLabel = target.querySelector('.time-label');
-    if (timeLabel) {
-        updateTimeLabel(timeLabel, target.dataset.start, newEndTime, target);
-    }
-
-    // Update activity data in timelineManager
-    updateTimelineManager(target, startMinutes, endMinutes, timelineKey);
-}
-
-/**
- * Updates the timelineManager with the new activity data.
- * @param {HTMLElement} target - The activity block being updated.
- * @param {number} startMinutes - The new start time in minutes.
- * @param {number} endMinutes - The new end time in minutes.
- * @param {string} timelineKey - The key of the current timeline.
- */
-function updateTimelineManager(target, startMinutes, endMinutes, timelineKey) {
-    const currentData = window.timelineManager.activities[timelineKey];
-    const activityId = target.dataset.id;
-    const activityIndex = currentData.findIndex(activity => activity.id === activityId);
-
-    if (activityIndex !== -1) {
-        const formattedTimes = formatTimeDDMMYYYYHHMM(formatTimeHHMM(startMinutes), formatTimeHHMM(endMinutes));
-        if (!formattedTimes.startTime || !formattedTimes.endTime) {
-            throw new Error('Activity start time and end time must be defined');
-        }
-        currentData[activityIndex].startTime = formattedTimes.startTime;
-        currentData[activityIndex].endTime = formattedTimes.endTime;
-        currentData[activityIndex].blockLength = endMinutes - startMinutes;
-
-        // Validate timeline after resizing activity
-        try {
-            window.timelineManager.metadata[timelineKey].validate();
-        } catch (error) {
-            console.error('Timeline validation failed:', error);
-            revertResize(target);
+        
+        if (clickPositionPercent >= 100) {
             return;
         }
 
-        if (DEBUG_MODE) {
-            console.log('Updated activity data:', currentData[activityIndex]);
+        // Get minutes and find nearest 10-minute markers
+        let clickMinutes = positionToMinutes(clickPositionPercent);
+        if (clickMinutes === null) {
+            return;
         }
-    }
-}
-
-/**
- * Reverts the resize action by restoring original dataset values.
- * @param {HTMLElement} target - The activity block to revert.
- */
-function revertResize(target) {
-    target.dataset.start = target.dataset.originalStart;
-    target.dataset.end = target.dataset.originalEnd;
-    target.dataset.length = target.dataset.originalLength;
-    target.style.left = `${minutesToPercentage(timeToMinutes(target.dataset.originalStart))}%`;
-    target.style.width = `${minutesToPercentage(timeToMinutes(target.dataset.originalEnd) - timeToMinutes(target.dataset.originalStart))}%`;
-
-    // Update time label
-    const timeLabel = target.querySelector('.time-label');
-    if (timeLabel) {
-        updateTimeLabel(timeLabel, target.dataset.originalStart, target.dataset.originalEnd, target);
-    }
-
-    // Provide user feedback
-    provideUserFeedback(target, 'Resize reverted due to validation failure.');
-}
-
-/**
- * Provides user feedback by adding a temporary visual indicator.
- * @param {HTMLElement} target - The activity block to highlight.
- * @param {string} message - The feedback message.
- */
-function provideUserFeedback(target, message) {
-    target.classList.add('invalid');
-    // Optionally, display a tooltip or message to the user
-    alert(message); // Simple alert for demonstration; consider using a custom tooltip in production
-    setTimeout(() => target.classList.remove('invalid'), 400);
-}
-
-/**
- * Handles click events on the timeline for adding new activity blocks.
- * @param {Object} event - The click event object.
- * @param {HTMLElement} targetTimeline - The timeline element being interacted with.
- */
-function handleTimelineClick(event, targetTimeline) {
-    if (isTimelineFull()) {
-        flashInvalidPlacement(targetTimeline);
-        return;
-    }
-
-    const currentKey = getCurrentTimelineKey();
-    window.timelineManager.activities[currentKey] = getCurrentTimelineData();
-
-    const rect = targetTimeline.getBoundingClientRect();
-    const isMobile = getIsMobile();
-    const clickPositionPercent = calculateClickPositionPercent(event, rect, isMobile);
-
-    if (clickPositionPercent >= 100) return;
-
-    const clickMinutes = positionToMinutes(clickPositionPercent);
-    if (clickMinutes === null) {
-        console.error('Invalid click minutes calculation:', clickMinutes);
-        alert('Cannot place activity here due to invalid position.');
-        return;
-    }
-
-    const [startMinutes, endMinutes] = findNearestMarkers(clickMinutes, isMobile);
-
-    if (isNaN(startMinutes) || isNaN(endMinutes)) {
-        console.error('Invalid minutes calculation:', { startMinutes, endMinutes });
-        alert('Cannot place activity here due to invalid position.');
-        return;
-    }
-
-    if (!canPlaceActivity(startMinutes, endMinutes, null)) {
-        flashInvalidPlacement(targetTimeline, startMinutes, endMinutes);
-        return;
-    }
-
-    createActivityBlock(targetTimeline, startMinutes, endMinutes);
-}
-
-/**
- * Calculates the click position percentage based on the event and device type.
- * @param {Object} event - The click event object.
- * @param {DOMRect} rect - The bounding rectangle of the timeline.
- * @param {boolean} isMobile - Flag indicating if the device is mobile.
- * @returns {number} - The click position as a percentage.
- */
-function calculateClickPositionPercent(event, rect, isMobile) {
-    if (isMobile) {
-        const y = event.clientY - rect.top;
-        const clampedY = Math.max(0, Math.min(y, rect.height));
-        return (clampedY / rect.height) * 100;
-    } else {
-        const x = event.clientX - rect.left;
-        const clampedX = Math.max(0, Math.min(x, rect.width));
-        return (clampedX / rect.width) * 100;
-    }
-}
-
-/**
- * Flashes an invalid placement indication on the timeline.
- * @param {HTMLElement} targetTimeline - The timeline element.
- * @param {number} [startMinutes] - Optional start minutes for additional feedback.
- * @param {number} [endMinutes] - Optional end minutes for additional feedback.
- */
-function flashInvalidPlacement(targetTimeline, startMinutes, endMinutes) {
-    const block = document.createElement('div');
-    block.className = 'activity-block invalid';
-    block.style.backgroundColor = '#ff0000'; // Red color for invalid placement
-
-    const isMobile = getIsMobile();
-    const timelineRect = targetTimeline.getBoundingClientRect();
-
-    const startPositionPercent = minutesToPercentage(startMinutes || 0);
-    const blockSize = (INCREMENT_MINUTES / MINUTES_PER_DAY) * 100;
-
-    if (isMobile) {
-        block.style.height = `${blockSize}%`;
-        block.style.top = `${startPositionPercent}%`;
-        block.style.width = '50%';
-        block.style.left = '25%';
-    } else {
-        block.style.width = `${blockSize}%`;
-        block.style.left = `${startPositionPercent}%`;
-        block.style.height = '50%';
-        block.style.top = '25%';
-    }
-
-    targetTimeline.appendChild(block);
-    setTimeout(() => block.remove(), 400); // Remove after animation
-}
-
-/**
- * Creates a new activity block on the timeline.
- * @param {HTMLElement} targetTimeline - The timeline element.
- * @param {number} startMinutes - The start time in minutes.
- * @param {number} endMinutes - The end time in minutes.
- */
-function createActivityBlock(targetTimeline, startMinutes, endMinutes) {
-    const currentKey = getCurrentTimelineKey();
-    const categories = window.timelineManager.metadata[currentKey].categories; // Assuming categories are accessible here
-    const category = selectedActivity.category; // Assuming selectedActivity is set
-
-    const activityData = {
-        id: generateUniqueId(),
-        activity: selectedActivity.selections
-            ? selectedActivity.selections.map(s => s.name).join(' | ')
-            : selectedActivity.name,
-        category: category,
-        startTime: formatTimeHHMM(startMinutes),
-        endTime: formatTimeHHMM(endMinutes),
-        blockLength: endMinutes - startMinutes,
-        color: selectedActivity.color || '#808080',
-        count: selectedActivity.selections ? selectedActivity.selections.length : 1
-    };
-
-    // Create the activity block element
-    const activityBlock = document.createElement('div');
-    activityBlock.className = 'activity-block';
-    activityBlock.dataset.timelineKey = currentKey;
-    activityBlock.dataset.start = activityData.startTime;
-    activityBlock.dataset.end = activityData.endTime;
-    activityBlock.dataset.length = activityData.blockLength;
-    activityBlock.dataset.category = activityData.category;
-    activityBlock.dataset.mode = selectedActivity.selections ? 'multiple-choice' : 'single-choice';
-    activityBlock.dataset.count = activityData.count;
-    activityBlock.dataset.id = activityData.id;
-
-    // Set background color or gradient
-    if (selectedActivity.selections) {
-        const colors = selectedActivity.selections.map(s => s.color);
-        const numSelections = colors.length;
-        const percentage = 100 / numSelections;
-        const stops = colors.map((color, index) => 
-            `${color} ${index * percentage}%, ${color} ${(index + 1) * percentage}%`
-        ).join(', ');
-        activityBlock.style.background = `linear-gradient(to right, ${stops})`; // Adjust direction based on device
-    } else {
-        activityBlock.style.backgroundColor = activityData.color;
-    }
-
-    // Create and append the text div
-    const textDiv = document.createElement('div');
-    textDiv.className = getTextDivClass(activityData.blockLength);
-    textDiv.innerHTML = selectedActivity.selections
-        ? selectedActivity.selections.map(s => s.name).join('<br>')
-        : selectedActivity.name;
-    activityBlock.appendChild(textDiv);
-
-    // Set positioning and sizing
-    const startPositionPercent = minutesToPercentage(startMinutes);
-    const blockSizePercent = (INCREMENT_MINUTES / MINUTES_PER_DAY) * 100; // 10 minutes
-
-    if (getIsMobile()) {
-        activityBlock.style.height = `${blockSizePercent}%`;
-        activityBlock.style.top = `${startPositionPercent}%`;
-        activityBlock.style.width = '75%';
-        activityBlock.style.left = '12.5%'; // Centered
-    } else {
-        activityBlock.style.width = `${blockSizePercent}%`;
-        activityBlock.style.left = `${startPositionPercent}%`;
-        activityBlock.style.height = '75%';
-        activityBlock.style.top = '12.5%'; // Centered
-    }
-
-    // Append the activity block to the timeline
-    targetTimeline.querySelector('.activities').appendChild(activityBlock);
-
-    // Create and append the time label
-    const timeLabel = createTimeLabel(activityBlock);
-    updateTimeLabel(timeLabel, activityData.startTime, activityData.endTime, activityBlock);
-    timeLabel.style.display = 'block'; // Ensure the new label is visible
-
-    // Add activity data to timelineManager
-    window.timelineManager.activities[currentKey].push(activityData);
-
-    // Validate timeline after adding activity
-    try {
-        window.timelineManager.metadata[currentKey].validate();
-    } catch (error) {
-        console.error('Timeline validation failed:', error);
-        window.timelineManager.activities[currentKey].pop(); // Remove the invalid activity
-        activityBlock.remove();
-        flashInvalidPlacement(targetTimeline, startMinutes, endMinutes);
-        return;
-    }
-
-    if (DEBUG_MODE) {
-        console.log('Added new activity:', activityData);
-    }
-
-    // Reset selected activity and update UI
-    deselectAllActivityButtons();
-}
-
-/**
- * Determines the appropriate class for the text div based on block length and device type.
- * @param {number} blockLength - The length of the activity block in minutes.
- * @returns {string} - The class name for the text div.
- */
-function getTextDivClass(blockLength) {
-    return getIsMobile()
-        ? (blockLength >= 60 ? 'activity-block-text-narrow wide resized' : 'activity-block-text-narrow')
-        : (blockLength >= 60 ? 'activity-block-text-narrow wide resized' : 'activity-block-text-vertical');
-}
-
-/**
- * Deselects all activity buttons after an activity is placed.
- */
-function deselectAllActivityButtons() {
-    document.querySelectorAll('.activity-button').forEach(btn => btn.classList.remove('selected'));
-    selectedActivity = null;
-}
-
-/**
- * Reverts the resize action by restoring original dataset values.
- * @param {HTMLElement} target - The activity block to revert.
- */
-function revertResize(target) {
-    target.dataset.start = target.dataset.originalStart;
-    target.dataset.end = target.dataset.originalEnd;
-    target.dataset.length = target.dataset.originalLength;
-    target.style.left = `${minutesToPercentage(timeToMinutes(target.dataset.originalStart))}%`;
-    target.style.width = `${minutesToPercentage(timeToMinutes(target.dataset.originalEnd) - timeToMinutes(target.dataset.originalStart))}%`;
-
-    // Update time label
-    const timeLabel = target.querySelector('.time-label');
-    if (timeLabel) {
-        updateTimeLabel(timeLabel, target.dataset.originalStart, target.dataset.originalEnd, target);
-    }
-
-    // Provide user feedback
-    provideUserFeedback(target, 'Resize reverted due to validation failure.');
-}
-
-/**
- * Provides user feedback by adding a temporary visual indicator.
- * @param {HTMLElement} target - The activity block to highlight.
- * @param {string} message - The feedback message.
- */
-function provideUserFeedback(target, message) {
-    target.classList.add('invalid');
-    // Optionally, display a tooltip or message to the user
-    alert(message); // Simple alert for demonstration; consider using a custom tooltip in production
-    setTimeout(() => target.classList.remove('invalid'), 400);
-}
-
-/**
- * Handles click events on the timeline for adding new activity blocks.
- * @param {Object} event - The click event object.
- * @param {HTMLElement} targetTimeline - The timeline element being interacted with.
- */
-function handleTimelineClick(event, targetTimeline) {
-    if (isTimelineFull()) {
-        flashInvalidPlacement(targetTimeline);
-        return;
-    }
-
-    const currentKey = getCurrentTimelineKey();
-    window.timelineManager.activities[currentKey] = getCurrentTimelineData();
-
-    const rect = targetTimeline.getBoundingClientRect();
-    const isMobile = getIsMobile();
-    const clickPositionPercent = calculateClickPositionPercent(event, rect, isMobile);
-
-    if (clickPositionPercent >= 100) return;
-
-    const clickMinutes = positionToMinutes(clickPositionPercent);
-    if (clickMinutes === null) {
-        console.error('Invalid click minutes calculation:', clickMinutes);
-        alert('Cannot place activity here due to invalid position.');
-        return;
-    }
-
-    const [startMinutes, endMinutes] = findNearestMarkers(clickMinutes, isMobile);
-
-    if (isNaN(startMinutes) || isNaN(endMinutes)) {
-        console.error('Invalid minutes calculation:', { startMinutes, endMinutes });
-        alert('Cannot place activity here due to invalid position.');
-        return;
-    }
-
-    if (!canPlaceActivity(startMinutes, endMinutes, null)) {
-        flashInvalidPlacement(targetTimeline, startMinutes, endMinutes);
-        return;
-    }
-
-    createActivityBlock(targetTimeline, startMinutes, endMinutes);
-}
-
-/**
- * Calculates the click position percentage based on the event and device type.
- * @param {Object} event - The click event object.
- * @param {DOMRect} rect - The bounding rectangle of the timeline.
- * @param {boolean} isMobile - Flag indicating if the device is mobile.
- * @returns {number} - The click position as a percentage.
- */
-function calculateClickPositionPercent(event, rect, isMobile) {
-    if (isMobile) {
-        const y = event.clientY - rect.top;
-        const clampedY = Math.max(0, Math.min(y, rect.height));
-        return (clampedY / rect.height) * 100;
-    } else {
-        const x = event.clientX - rect.left;
-        const clampedX = Math.max(0, Math.min(x, rect.width));
-        return (clampedX / rect.width) * 100;
-    }
-}
-
-/**
- * Flashes an invalid placement indication on the timeline.
- * @param {HTMLElement} targetTimeline - The timeline element.
- * @param {number} [startMinutes] - Optional start minutes for additional feedback.
- * @param {number} [endMinutes] - Optional end minutes for additional feedback.
- */
-function flashInvalidPlacement(targetTimeline, startMinutes, endMinutes) {
-    const block = document.createElement('div');
-    block.className = 'activity-block invalid';
-    block.style.backgroundColor = '#ff0000'; // Red color for invalid placement
-
-    const isMobile = getIsMobile();
-    const timelineRect = targetTimeline.getBoundingClientRect();
-
-    const startPositionPercent = minutesToPercentage(startMinutes || 0);
-    const blockSize = (INCREMENT_MINUTES / MINUTES_PER_DAY) * 100;
-
-    if (isMobile) {
-        block.style.height = `${blockSize}%`;
-        block.style.top = `${startPositionPercent}%`;
-        block.style.width = '50%';
-        block.style.left = '25%';
-    } else {
-        block.style.width = `${blockSize}%`;
-        block.style.left = `${startPositionPercent}%`;
-        block.style.height = '50%';
-        block.style.top = '25%';
-    }
-
-    targetTimeline.appendChild(block);
-    setTimeout(() => block.remove(), 400); // Remove after animation
-}
-
-/**
- * Creates a new activity block on the timeline.
- * @param {HTMLElement} targetTimeline - The timeline element.
- * @param {number} startMinutes - The start time in minutes.
- * @param {number} endMinutes - The end time in minutes.
- */
-function createActivityBlock(targetTimeline, startMinutes, endMinutes) {
-    const currentKey = getCurrentTimelineKey();
-    const categories = window.timelineManager.metadata[currentKey].categories; // Assuming categories are accessible here
-    const category = selectedActivity.category; // Assuming selectedActivity is set
-
-    const activityData = {
-        id: generateUniqueId(),
-        activity: selectedActivity.selections
-            ? selectedActivity.selections.map(s => s.name).join(' | ')
-            : selectedActivity.name,
-        category: category,
-        startTime: formatTimeHHMM(startMinutes),
-        endTime: formatTimeHHMM(endMinutes),
-        blockLength: endMinutes - startMinutes,
-        color: selectedActivity.color || '#808080',
-        count: selectedActivity.selections ? selectedActivity.selections.length : 1
-    };
-
-    // Create the activity block element
-    const activityBlock = document.createElement('div');
-    activityBlock.className = 'activity-block';
-    activityBlock.dataset.timelineKey = currentKey;
-    activityBlock.dataset.start = activityData.startTime;
-    activityBlock.dataset.end = activityData.endTime;
-    activityBlock.dataset.length = activityData.blockLength;
-    activityBlock.dataset.category = activityData.category;
-    activityBlock.dataset.mode = selectedActivity.selections ? 'multiple-choice' : 'single-choice';
-    activityBlock.dataset.count = activityData.count;
-    activityBlock.dataset.id = activityData.id;
-
-    // Set background color or gradient
-    if (selectedActivity.selections) {
-        const colors = selectedActivity.selections.map(s => s.color);
-        const numSelections = colors.length;
-        const percentage = 100 / numSelections;
-        const stops = colors.map((color, index) => 
-            `${color} ${index * percentage}%, ${color} ${(index + 1) * percentage}%`
-        ).join(', ');
-        activityBlock.style.background = `linear-gradient(to right, ${stops})`; // Adjust direction based on device
-    } else {
-        activityBlock.style.backgroundColor = activityData.color;
-    }
-
-    // Create and append the text div
-    const textDiv = document.createElement('div');
-    textDiv.className = getTextDivClass(activityData.blockLength);
-    textDiv.innerHTML = selectedActivity.selections
-        ? selectedActivity.selections.map(s => s.name).join('<br>')
-        : selectedActivity.name;
-    activityBlock.appendChild(textDiv);
-
-    // Set positioning and sizing
-    const startPositionPercent = minutesToPercentage(startMinutes);
-    const blockSizePercent = (INCREMENT_MINUTES / MINUTES_PER_DAY) * 100; // 10 minutes
-
-    if (getIsMobile()) {
-        activityBlock.style.height = `${blockSizePercent}%`;
-        activityBlock.style.top = `${startPositionPercent}%`;
-        activityBlock.style.width = '75%';
-        activityBlock.style.left = '12.5%'; // Centered
-    } else {
-        activityBlock.style.width = `${blockSizePercent}%`;
-        activityBlock.style.left = `${startPositionPercent}%`;
-        activityBlock.style.height = '75%';
-        activityBlock.style.top = '12.5%'; // Centered
-    }
-
-    // Append the activity block to the timeline
-    targetTimeline.querySelector('.activities').appendChild(activityBlock);
-
-    // Create and append the time label
-    const timeLabel = createTimeLabel(activityBlock);
-    updateTimeLabel(timeLabel, activityData.startTime, activityData.endTime, activityBlock);
-    timeLabel.style.display = 'block'; // Ensure the new label is visible
-
-    // Add activity data to timelineManager
-    window.timelineManager.activities[currentKey].push(activityData);
-
-    // Validate timeline after adding activity
-    try {
-        window.timelineManager.metadata[currentKey].validate();
-    } catch (error) {
-        console.error('Timeline validation failed:', error);
-        window.timelineManager.activities[currentKey].pop(); // Remove the invalid activity
-        activityBlock.remove();
-        flashInvalidPlacement(targetTimeline, startMinutes, endMinutes);
-        return;
-    }
-
-    if (DEBUG_MODE) {
-        console.log('Added new activity:', activityData);
-    }
-
-    // Reset selected activity and update UI
-    deselectAllActivityButtons();
-}
-
-/**
- * Determines the appropriate class for the text div based on block length and device type.
- * @param {number} blockLength - The length of the activity block in minutes.
- * @returns {string} - The class name for the text div.
- */
-function getTextDivClass(blockLength) {
-    return getIsMobile()
-        ? (blockLength >= 60 ? 'activity-block-text-narrow wide resized' : 'activity-block-text-narrow')
-        : (blockLength >= 60 ? 'activity-block-text-narrow wide resized' : 'activity-block-text-vertical');
-}
-
-/**
- * Deselects all activity buttons after an activity is placed.
- */
-function deselectAllActivityButtons() {
-    document.querySelectorAll('.activity-button').forEach(btn => btn.classList.remove('selected'));
-    selectedActivity = null;
-}
-
-/**
- * Reverts the resize action by restoring original dataset values.
- * @param {HTMLElement} target - The activity block to revert.
- */
-function revertResize(target) {
-    target.dataset.start = target.dataset.originalStart;
-    target.dataset.end = target.dataset.originalEnd;
-    target.dataset.length = target.dataset.originalLength;
-    target.style.left = `${minutesToPercentage(timeToMinutes(target.dataset.originalStart))}%`;
-    target.style.width = `${minutesToPercentage(timeToMinutes(target.dataset.originalEnd) - timeToMinutes(target.dataset.originalStart))}%`;
-
-    // Update time label
-    const timeLabel = target.querySelector('.time-label');
-    if (timeLabel) {
-        updateTimeLabel(timeLabel, target.dataset.originalStart, target.dataset.originalEnd, target);
-    }
-
-    // Provide user feedback
-    provideUserFeedback(target, 'Resize reverted due to validation failure.');
-}
-
-/**
- * Provides user feedback by adding a temporary visual indicator.
- * @param {HTMLElement} target - The activity block to highlight.
- * @param {string} message - The feedback message.
- */
-function provideUserFeedback(target, message) {
-    target.classList.add('invalid');
-    // Optionally, display a tooltip or message to the user
-    alert(message); // Simple alert for demonstration; consider using a custom tooltip in production
-    setTimeout(() => target.classList.remove('invalid'), 400);
+        
+        const [startMinutes, endMinutes] = findNearestMarkers(clickMinutes, isMobile);
+
+        if (isNaN(startMinutes) || isNaN(endMinutes)) {
+            console.error('Invalid minutes calculation:', { startMinutes, endMinutes });
+            alert('Cannot place activity here due to invalid position.');
+            return;
+        }
+        
+        // Check if activity can be placed at this position
+        if (!canPlaceActivity(startMinutes, endMinutes, null)) {
+            console.error('Activity placement blocked:', { startMinutes, endMinutes });
+            const block = document.createElement('div');
+            block.className = 'activity-block invalid';
+            block.style.backgroundColor = selectedActivity.color;
+            
+            // Calculate position percentages
+            const startPositionPercent = minutesToPercentage(startMinutes);
+            const blockSize = (10 / 1440) * 100;  // 10 minutes as percentage of day
+            
+            if (isMobile) {
+                block.style.height = `${blockSize}%`;
+                block.style.top = `${startPositionPercent}%`;
+                block.style.width = '50%';
+                block.style.left = '25%';
+            } else {
+                block.style.width = `${blockSize}%`;
+                block.style.left = `${startPositionPercent}%`;
+                block.style.height = '50%';
+                block.style.top = '25%';
+            }
+            
+            targetTimeline.appendChild(block);
+            setTimeout(() => block.remove(), 400); // Remove after animation
+            return;
+        }
+
+        const currentBlock = document.createElement('div');
+        currentBlock.className = 'activity-block';
+        currentBlock.dataset.timelineKey = getCurrentTimelineKey();
+        currentBlock.dataset.start = formatTimeHHMM(startMinutes);
+        currentBlock.dataset.end = formatTimeHHMM(endMinutes);
+        currentBlock.dataset.length = endMinutes - startMinutes;
+        currentBlock.dataset.category = selectedActivity.category;
+        currentBlock.dataset.mode = selectedActivity.selections ? 'multiple-choice' : 'single-choice';
+        currentBlock.dataset.count = selectedActivity.selections ? selectedActivity.selections.length : 1;
+        if (selectedActivity.selections) {
+            // Multiple selections - create split background
+            const colors = selectedActivity.selections.map(s => s.color);
+            const isMobile = getIsMobile();
+            const numSelections = colors.length;
+            const percentage = 100 / numSelections;
+            
+            if (isMobile) {
+                // Horizontal splits for mobile
+                const stops = colors.map((color, index) => 
+                    `${color} ${index * percentage}%, ${color} ${(index + 1) * percentage}%`
+                ).join(', ');
+                currentBlock.style.background = `linear-gradient(to right, ${stops})`;
+            } else {
+                // Vertical splits for desktop
+                const stops = colors.map((color, index) => 
+                    `${color} ${index * percentage}%, ${color} ${(index + 1) * percentage}%`
+                ).join(', ');
+                currentBlock.style.background = `linear-gradient(to bottom, ${stops})`;
+            }
+        } else {
+            currentBlock.style.backgroundColor = selectedActivity.color;
+        }
+        const textDiv = document.createElement('div');
+        let combinedActivityText;
+
+        if (selectedActivity.selections) {
+            if (DEBUG_MODE) {
+                console.log('Multiple selections:', selectedActivity.selections);
+            }
+            // For multiple selections, join names with line break in the text div
+            textDiv.innerHTML = selectedActivity.selections.map(s => s.name).join('<br>');
+            // But join with vertical separator for storing in timelineManager 
+            combinedActivityText = selectedActivity.selections.map(s => s.name).join(' | ');
+        } else {
+            textDiv.textContent = selectedActivity.name;
+            combinedActivityText = selectedActivity.name;
+        }
+        textDiv.style.maxWidth = '90%';
+        textDiv.style.overflow = 'hidden';
+        textDiv.style.textOverflow = 'ellipsis';
+        textDiv.style.whiteSpace = 'nowrap';
+        // Set initial class based on length and mode
+        const length = parseInt(currentBlock.dataset.length);
+
+        // Always use narrow text in mobile mode, add wide and resized only if length >= 60
+        textDiv.className = getIsMobile() 
+            ? (length >= 60 ? 'activity-block-text-narrow wide resized' : 'activity-block-text-narrow')
+            : (length >= 60 ? 'activity-block-text-narrow wide resized' : 'activity-block-text-vertical');
+        currentBlock.appendChild(textDiv);
+        
+        // Convert minutes to percentage for positioning
+        const startPositionPercent = minutesToPercentage(startMinutes);
+        const endPositionPercent = minutesToPercentage(endMinutes);
+        // Set block size to exactly 10/1440 percentage (10 minutes out of 24 hours)
+        let blockSize = (10 / 1440) * 100;  // This equals approximately 0.694444%
+        
+        // Ensure minimum block width is maintained
+        blockSize = Math.max(blockSize, calculateMinimumBlockWidth());
+        
+        // Adjust end time to match the block size
+        const adjustedEndMinutes = startMinutes + 10;
+        currentBlock.dataset.end = formatTimeHHMM(adjustedEndMinutes);
+
+        // Fixed dimensions for consistency
+        const MOBILE_BLOCK_WIDTH = 75; // 75% width in mobile mode
+        const DESKTOP_BLOCK_HEIGHT = 90; // Changed from 60 to 90
+        const MOBILE_OFFSET = 25; // Centers the block at 25% from left
+        const DESKTOP_OFFSET = 5; // Changed from 25 to 5 to keep blocks centered
+
+        if (isMobile) {
+            currentBlock.style.height = `${blockSize}%`;
+            currentBlock.style.top = `${startPositionPercent}%`;
+            currentBlock.style.width = `${MOBILE_BLOCK_WIDTH}%`;
+            currentBlock.style.left = `${MOBILE_OFFSET}%`;
+        } else {
+            currentBlock.style.width = `${blockSize}%`;
+            currentBlock.style.left = `${startPositionPercent}%`;
+            currentBlock.style.height = '75%';
+            currentBlock.style.top = '25%';
+        }
+        
+        const activitiesContainer = window.timelineManager.activeTimeline.querySelector('.activities') || (() => {
+            const container = document.createElement('div');
+            container.className = 'activities';
+            window.timelineManager.activeTimeline.appendChild(container);
+            return container;
+        })();
+
+        // Hide all existing time labels
+        activitiesContainer.querySelectorAll('.time-label').forEach(label => {
+            label.style.display = 'none';
+        });
+
+        activitiesContainer.appendChild(currentBlock);
+
+        // Create time label for both mobile and desktop modes
+        const timeLabel = createTimeLabel(currentBlock);
+        updateTimeLabel(timeLabel, formatTimeHHMM(startMinutes), formatTimeHHMM(endMinutes), currentBlock);
+        timeLabel.style.display = 'block'; // Ensure the new label is visible
+
+        // Deselect the activity button after successful placement
+        document.querySelectorAll('.activity-button').forEach(btn => btn.classList.remove('selected'));
+        selectedActivity = null;
+
+        const startTime = currentBlock.dataset.start;
+        const endTime = currentBlock.dataset.end;
+        const times = formatTimeDDMMYYYYHHMM(startTime, endTime);
+        if (!times.startTime || !times.endTime) {
+            throw new Error('Activity start time and end time must be defined');
+        }
+        // Get activity name and category from the block's text content and dataset
+        const activityText = textDiv.textContent;
+        const activityCategory = currentBlock.dataset.category;
+            
+        // Create activity data after all variables are defined
+        const activityData = {
+            id: generateUniqueId(),
+            activity: combinedActivityText,
+            category: activityCategory,
+            startTime: times.startTime,
+            endTime: times.endTime,
+            blockLength: parseInt(currentBlock.dataset.length),
+            color: selectedActivity?.color || '#808080',
+            count: parseInt(currentBlock.dataset.count) || 1
+        };
+        getCurrentTimelineData().push(activityData);
+        currentBlock.dataset.id = activityData.id;
+
+        // Validate timeline after adding activity
+        try {
+            const timelineKey = currentBlock.dataset.timelineKey;
+            window.timelineManager.metadata[timelineKey].validate();
+        } catch (error) {
+            console.error('Timeline validation failed:', error);
+            // Remove the invalid activity
+            getCurrentTimelineData().pop();
+            currentBlock.remove();
+            const block = document.createElement('div');
+            block.className = 'activity-block invalid';
+            block.style.backgroundColor = selectedActivity.color;
+            block.style.width = currentBlock.style.width;
+            block.style.height = currentBlock.style.height;
+            block.style.top = currentBlock.style.top;
+            block.style.left = currentBlock.style.left;
+            targetTimeline.appendChild(block);
+            setTimeout(() => block.remove(), 400);
+            return;
+        }
+
+        updateButtonStates();
+
+
+    });
 }
 
 async function init() {
