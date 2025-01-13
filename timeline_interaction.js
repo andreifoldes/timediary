@@ -16,6 +16,33 @@ import {
 const INCREMENT_MINUTES = 10;
 const MINUTES_PER_DAY = 24 * 60;
 
+export function initTimelineInteraction(timeline) {
+    if (!timeline) {
+        console.error('Timeline must be provided to initTimelineInteraction');
+        return;
+    }
+    const targetTimeline = timeline;
+    
+    // Initialize interact.js resizable
+    interact('.activity-block').resizable({
+        edges: { left: !getIsMobile(), right: !getIsMobile(), bottom: getIsMobile() },
+        modifiers: [
+            interact.modifiers.restrictEdges({
+                outer: '.timeline'
+            }),
+            interact.modifiers.restrictSize({
+                min: { width: 10, height: 10 }
+            })
+        ],
+        inertia: false,
+        listeners: {
+            start: handleResizeStart,
+            move: (event) => handleResizeMove(event, targetTimeline),
+            end: handleResizeEnd
+        }
+    });
+}
+
 export function handleResizeStart(event) {
     const target = event.target;
     target.classList.add('resizing');
