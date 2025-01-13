@@ -22,26 +22,52 @@ const SNAP_INTERVAL = 10;        // minutes
 const MIN_DURATION_MINUTES = 10; // default block is 10 minutes
 
 export function initBlockCreationByDrag(timeline) {
+  if (!timeline) {
+    console.error('Timeline element is null/undefined in initBlockCreationByDrag');
+    return;
+  }
+
   // 1) Listen for mouse events on the timeline
   let isMouseDown = false;
   let startX = 0, startY = 0;   // mouse coords for desktop vs. mobile
   let startPercent = 0;         // [0..100+]
   let previewBlock = null;
 
-  if (DEBUG_MODE) console.log('Initializing drag creation for timeline:', timeline);
+  if (DEBUG_MODE) {
+    console.log('Initializing drag creation for timeline:', {
+      timeline: timeline,
+      id: timeline.id,
+      classList: timeline.classList,
+      parent: timeline.parentElement,
+      isConnected: timeline.isConnected,
+      dimensions: {
+        width: timeline.offsetWidth,
+        height: timeline.offsetHeight
+      }
+    });
+  }
+
+  if (DEBUG_MODE) console.log('Adding mousedown listener to timeline:', timeline);
 
   timeline.addEventListener('mousedown', (e) => {
-    if (DEBUG_MODE) console.log('Mouse down event:', {
-      selectedActivity: window.selectedActivity,
-      targetIsBlock: !!e.target.closest('.activity-block'),
-      target: e.target
-    });
+    if (DEBUG_MODE) {
+      console.log('Mouse down event detected:', {
+        selectedActivity: window.selectedActivity,
+        targetIsBlock: !!e.target.closest('.activity-block'),
+        target: e.target,
+        timeline: timeline,
+        timelineActive: timeline === window.timelineManager.activeTimeline,
+        eventCoords: { x: e.clientX, y: e.clientY }
+      });
+    }
 
     // If no activity is selected, or we clicked an existing block, bail
     if (!window.selectedActivity || e.target.closest('.activity-block')) {
       if (DEBUG_MODE) console.log('Ignoring mousedown - no activity selected or clicked existing block');
       return;
     }
+
+    if (DEBUG_MODE) console.log('Proceeding with block creation - all conditions met');
 
     isMouseDown = true;
     const rect = timeline.getBoundingClientRect();
