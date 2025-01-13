@@ -955,14 +955,20 @@ function setupDebugClickHandler(timeline) {
             id: generateUniqueId(),
             activity: combinedActivityText,
             category: activityCategory,
-            startTime: times.startTime,
-            endTime: times.endTime,
+            startTime: startMinutes,
+            endTime: endMinutes,
             blockLength: parseInt(currentBlock.dataset.length),
             color: selectedActivity?.color || '#808080',
             count: parseInt(currentBlock.dataset.count) || 1
         };
-        getCurrentTimelineData().push(activityData);
+        
+        // Update both the DOM and timelineManager
         currentBlock.dataset.id = activityData.id;
+        const currentKey = getCurrentTimelineKey();
+        if (!window.timelineManager.activities[currentKey]) {
+            window.timelineManager.activities[currentKey] = [];
+        }
+        window.timelineManager.activities[currentKey].push(activityData);
 
         // Validate timeline after adding activity
         try {
