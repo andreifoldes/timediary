@@ -672,6 +672,8 @@ function initTimeline(timeline) {
 
 import { handleResizeStart, handleResizeMove, handleResizeEnd } from './timeline_interaction.js';
 
+import { initBlockCreationViaDrag } from './drag_creation.js';
+
 function initTimelineInteraction(timeline) {
     if (!timeline) {
         console.error('Timeline must be provided to initTimelineInteraction');
@@ -697,12 +699,13 @@ function initTimelineInteraction(timeline) {
             end: handleResizeEnd
         }
     });
-    
-    // Add click handling with debounce
-    let lastClickTime = 0;
-    const CLICK_DELAY = 300; // milliseconds
 
-    targetTimeline.addEventListener('click', (e) => {
+    // Initialize drag-to-create functionality
+    initBlockCreationViaDrag(timeline);
+
+    // Legacy click handler for debugging only
+    if (DEBUG_MODE) {
+        targetTimeline.addEventListener('click', (e) => {
         // Only process clicks on the active timeline
         if (!targetTimeline || targetTimeline !== window.timelineManager.activeTimeline) return;
         
@@ -945,9 +948,8 @@ function initTimelineInteraction(timeline) {
         }
 
         updateButtonStates();
-
-
-    });
+        });
+    }
 }
 
 async function init() {
