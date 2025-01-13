@@ -46,7 +46,7 @@ let selectedActivity = null;
 // Initialize timelineManager.activities with dynamic category keys
 window.timelineManager = {
     metadata: {}, // Timeline metadata (former timelines object)
-    activities: {}, // Will be populated dynamically based on timeline categories
+    activities: {}, // Will be populated with arrays for each timeline
     initialized: new Set(), // Tracks initialized timelines
     activeTimeline: document.getElementById('primary'), // Initialize with primary timeline
     keys: [], // Available timeline keys
@@ -1050,7 +1050,7 @@ async function init() {
         window.timelineManager.keys = Object.keys(data.timeline);
         window.timelineManager.keys.forEach(timelineKey => {
             window.timelineManager.metadata[timelineKey] = new Timeline(timelineKey, data.timeline[timelineKey]);
-            window.timelineManager.activities[timelineKey] = [];
+            window.timelineManager.activities[timelineKey] = []; // Initialize as empty array
         });
 
         // Create timelines wrapper if it doesn't exist

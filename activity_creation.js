@@ -297,11 +297,14 @@ function createBlockAtClickPosition(timeline, startPercent) {
   };
   block.dataset.id = activityData.id;
 
-  const currentKey = getCurrentTimelineKey();
-  if (!window.timelineManager.activities[currentKey]) {
-    window.timelineManager.activities[currentKey] = [];
+  const currentTimelineKey = getCurrentTimelineKey();
+  if (!window.timelineManager.activities[currentTimelineKey]) {
+    window.timelineManager.activities[currentTimelineKey] = [];
   }
-  window.timelineManager.activities[currentKey].push(activityData);
+  window.timelineManager.activities[currentTimelineKey].push(activityData);
+
+  // Update button states after adding activity
+  updateButtonStates();
 
   // 2) Finally deselect the activity
   window.selectedActivity = null;
@@ -381,6 +384,31 @@ function finalizeDragBlock(block, timeline) {
 
   // Data logic, store in timeline, etc.
   // ...
+  const activityData = {
+    id: generateUniqueId(),
+    // Might combine multiple selections or use just one
+    activity: window.selectedActivity.selections
+      ? window.selectedActivity.selections.map(s => s.name).join(' | ')
+      : window.selectedActivity.name,
+    category: block.dataset.category,
+    startTime: parseInt(block.dataset.startRaw, 10),
+    endTime: parseInt(block.dataset.endRaw, 10),
+    blockLength: parseInt(block.dataset.length, 10),
+    color: window.selectedActivity.color,
+    count: window.selectedActivity.selections
+      ? window.selectedActivity.selections.length
+      : 1
+  };
+  block.dataset.id = activityData.id;
+
+  const currentTimelineKey = getCurrentTimelineKey();
+  if (!window.timelineManager.activities[currentTimelineKey]) {
+    window.timelineManager.activities[currentTimelineKey] = [];
+  }
+  window.timelineManager.activities[currentTimelineKey].push(activityData);
+  
+  // Update button states after adding activity
+  updateButtonStates();
   
   // Deselect the activity
   window.selectedActivity = null;

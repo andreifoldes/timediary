@@ -312,3 +312,11 @@ export function handleResizeEnd(event) {
         textDiv.className = getTextDivClass(length);
     }
 }
+
+function createActivityBlock(timeline, position, selectedActivity) {
+    // ...existing code...
+
+    // After successfully adding the activity and before returning
+    updateButtonStates();
+    return currentBlock;
+}
