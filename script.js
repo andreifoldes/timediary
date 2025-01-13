@@ -1160,7 +1160,7 @@ function initTimelineInteraction(timeline) {
     });
 }
 
-function init() {
+async function init() {
     try {
         // Load initial timeline data
         const response = await fetch('activities.json');
