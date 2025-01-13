@@ -443,8 +443,16 @@ export function canPlaceActivity(newStart, newEnd, excludeId = null) {
     // Check for overlaps in current timeline only
     const hasOverlap = activities.some(activity => {
         if (excludeId && activity.id === excludeId) return false;
-        const activityStart = timeToMinutes(activity.startTime.split(' ')[1]);
-        const activityEnd = timeToMinutes(activity.endTime.split(' ')[1]);
+        
+        // Handle both number and string formats
+        const activityStart = typeof activity.startTime === 'number' 
+            ? activity.startTime 
+            : timeToMinutes(activity.startTime.split(' ')[1]);
+            
+        const activityEnd = typeof activity.endTime === 'number'
+            ? activity.endTime
+            : timeToMinutes(activity.endTime.split(' ')[1]);
+            
         const overlaps = (newStart < activityEnd && newEnd > activityStart);
         
         if (DEBUG_MODE && overlaps) {
