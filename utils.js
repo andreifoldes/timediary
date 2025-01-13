@@ -445,16 +445,12 @@ export function canPlaceActivity(newStart, newEnd, excludeId = null) {
     const hasOverlap = activities.some(activity => {
         if (excludeId && activity.id === excludeId) return false;
         
-        // Handle both number and string formats
-        const activityStart = typeof activity.startTime === 'number' 
-            ? activity.startTime 
-            : timeToMinutes(activity.startTime.split(' ')[1]);
-            
-        const activityEnd = typeof activity.endTime === 'number'
-            ? activity.endTime
-            : timeToMinutes(activity.endTime.split(' ')[1]);
-            
-        const overlaps = (newStart < activityEnd && newEnd > activityStart);
+        // Get raw minutes from dataset for accurate comparison
+        const activityStart = parseInt(activity.startTime || activity.dataset?.startRaw || 0);
+        const activityEnd = parseInt(activity.endTime || activity.dataset?.endRaw || 0);
+        
+        // Check if ranges overlap
+        const overlaps = Math.max(newStart, activityStart) < Math.min(newEnd, activityEnd);
         
         if (DEBUG_MODE && overlaps) {
             console.log('Overlap detected in timeline', currentKey, {
