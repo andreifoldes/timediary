@@ -95,7 +95,9 @@ function updateTimeLabel(label, startTime, endTime) {
 
 export {
     createTimeLabel,
-    updateTimeLabel
+    updateTimeLabel,
+    createFloatingAddButton,
+    createModal
 };
 
 export function generateUniqueId() {
