@@ -931,6 +931,9 @@ function setupDebugClickHandler(timeline) {
         // Hide time labels for all existing blocks in current timeline
         const currentKey = getCurrentTimelineKey();
         const currentActivities = window.timelineManager.activities[currentKey] || [];
+        // Hide time labels for all blocks in current timeline
+        const timelineKey = getCurrentTimelineKey();
+        const currentActivities = window.timelineManager.activities[timelineKey] || [];
         currentActivities.forEach(activity => {
             const existingBlock = activitiesContainer.querySelector(`.activity-block[data-id="${activity.id}"]`);
             if (existingBlock) {
@@ -946,7 +949,7 @@ function setupDebugClickHandler(timeline) {
         // Create time label for both mobile and desktop modes
         const timeLabel = createTimeLabel(currentBlock);
         updateTimeLabel(timeLabel, formatTimeHHMM(startMinutes), formatTimeHHMM(endMinutes), currentBlock);
-        timeLabel.style.display = 'block'; // Ensure only the new label is visible
+        timeLabel.style.display = 'block'; // Make new label visible
 
         // Deselect the activity button after successful placement
         document.querySelectorAll('.activity-button').forEach(btn => btn.classList.remove('selected'));
