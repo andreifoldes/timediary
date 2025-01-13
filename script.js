@@ -678,6 +678,7 @@ function initTimelineInteraction(timeline) {
         return;
     }
     const targetTimeline = timeline;
+    let lastClickTime = 0;
     
     // Initialize interact.js resizable
     interact('.activity-block').resizable({
