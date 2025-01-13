@@ -750,7 +750,15 @@ export function updateButtonStates() {
     const currentActivities = window.timelineManager.activities[currentKey] || [];
     
     // Enable/disable undo and clean row buttons based on whether there are activities
-    const hasActivities = currentActivities.length > 0;
+    const hasActivities = Array.isArray(currentActivities) && currentActivities.length > 0;
+    
+    if (DEBUG_MODE) {
+        console.log('Checking activities state:', {
+            currentKey,
+            activitiesCount: currentActivities?.length,
+            hasActivities
+        });
+    }
     
     // Safely update button states with null checks
     if (undoButton) {
