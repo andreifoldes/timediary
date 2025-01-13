@@ -206,8 +206,13 @@ function createBlockAtClickPosition(timeline, startPercent) {
   let endMins = startMins + MIN_DURATION_MINUTES; // 10 minutes by default
 
   // If crossing midnight or you want to allow >24h, handle that logic here
-  if (endMins > 1440) {
-    endMins = 1440; // or endMins = startMins + ...
+  // if (endMins > 1440) {
+  //   endMins = 1440; // or endMins = startMins + ...
+  // }
+
+  // If you want up to 28h (1680 minutes):
+  if (endMins > 1680) {
+    endMins = 1680; 
   }
 
   // Create the block
@@ -272,10 +277,33 @@ function createBlockAtClickPosition(timeline, startPercent) {
   // Update label after block is in DOM
   updateTimeLabel(timeLabel, block.dataset.start, block.dataset.end, block);
 
-  // After creation, do your data logic, e.g. push to timeline store, etc.
-  // ...
-  
-  // Deselect the activity
+  // ─────────────────────────────────────────────────────────────────────
+  // 1) Now create a data object and add it to timelineManager
+  // ─────────────────────────────────────────────────────────────────────
+  const activityData = {
+    id: generateUniqueId(),
+    // Might combine multiple selections or use just one
+    activity: window.selectedActivity.selections
+      ? window.selectedActivity.selections.map(s => s.name).join(' | ')
+      : window.selectedActivity.name,
+    category: block.dataset.category,
+    startTime: parseInt(block.dataset.startRaw, 10),
+    endTime: parseInt(block.dataset.endRaw, 10),
+    blockLength: parseInt(block.dataset.length, 10),
+    color: window.selectedActivity.color,
+    count: window.selectedActivity.selections
+      ? window.selectedActivity.selections.length
+      : 1
+  };
+  block.dataset.id = activityData.id;
+
+  const currentKey = getCurrentTimelineKey();
+  if (!window.timelineManager.activities[currentKey]) {
+    window.timelineManager.activities[currentKey] = [];
+  }
+  window.timelineManager.activities[currentKey].push(activityData);
+
+  // 2) Finally deselect the activity
   window.selectedActivity = null;
 }
 
