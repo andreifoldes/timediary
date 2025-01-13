@@ -526,6 +526,274 @@ export function isOverlapping(elem1, elem2) {
 
 
 
+// Button and UI state management functions
+export function sendData() {
+    // Get flattened timeline data
+    const timelineData = createTimelineDataFrame();
+    
+    // Get all unique headers from study parameters
+    const studyHeaders = Object.keys(window.timelineManager.study || {});
+    
+    // Combine standard headers with study parameter headers
+    const headers = ['timelineKey', 'activity', 'category', 'startTime', 'endTime', ...studyHeaders];
+    
+    // Process timeline data to ensure activity and category are properly set
+    const processedData = timelineData.map(row => {
+        // Find the activity block element by ID to get the actual activity data
+        const activityBlock = document.querySelector(`.activity-block[data-id="${row.id}"]`);
+        if (activityBlock) {
+            return {
+                ...row,
+                activity: activityBlock.querySelector('div').textContent || row.activity,
+                category: activityBlock.dataset.category || row.category
+            };
+        }
+        return row;
+    });
+
+    const csvContent = [
+        headers.join(','),
+        ...processedData.map(row => 
+            headers.map(header => 
+                // Wrap values in quotes and escape existing quotes
+                `"${String(row[header] || '').replace(/"/g, '""')}"`
+            ).join(',')
+        )
+    ].join('\n');
+
+    // Create blob and download link
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(blob);
+    const today = new Date();
+    const dateStr = today.toISOString().slice(0,10).replace(/-/g,'');
+    link.download = `${dateStr}_timeline_activities.csv`;
+    
+    // Trigger download
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    
+    console.log('Data exported as CSV:', timelineData);
+}
+
+export function initButtons() {
+    const cleanRowBtn = document.getElementById('cleanRowBtn');
+    cleanRowBtn.addEventListener('click', () => {
+        const currentKey = getCurrentTimelineKey();
+        const currentData = getCurrentTimelineData();
+        if (currentData.length > 0) {
+            // Get the activities container of the active timeline
+            const activeTimeline = window.timelineManager.activeTimeline;
+            const activitiesContainer = activeTimeline.querySelector('.activities');
+            
+            if (activitiesContainer) {
+                // Remove all activity blocks from the DOM
+                while (activitiesContainer.firstChild) {
+                    activitiesContainer.removeChild(activitiesContainer.firstChild);
+                }
+            }
+
+            // Clear the activities data for current timeline
+            window.timelineManager.activities[currentKey] = [];
+            
+            try {
+                window.timelineManager.metadata[currentKey].validate();
+            } catch (error) {
+                console.error('Timeline validation failed:', error);
+                alert('Timeline validation error: ' + error.message);
+                return;
+            }
+                
+            updateButtonStates();
+
+            if (DEBUG_MODE) {
+                console.log('Timeline data after clean:', window.timelineManager.activities);
+            }
+        }
+    });
+
+    document.getElementById('undoBtn').addEventListener('click', () => {
+        const currentKey = getCurrentTimelineKey();
+        const currentData = getCurrentTimelineData();
+        if (currentData.length > 0) {
+            if (DEBUG_MODE) {
+                console.log('Before undo - timelineData:', window.timelineManager.activities);
+            }
+
+            const lastActivity = currentData.pop();
+            // Update timeline manager activities and validate
+            window.timelineManager.activities[currentKey] = currentData;
+            try {
+                window.timelineManager.metadata[currentKey].validate();
+            } catch (error) {
+                console.error('Timeline validation failed:', error);
+                // Revert the change
+                window.timelineManager.activities[currentKey] = [...currentData, lastActivity];
+                const lastBlock = timeline.querySelector(`.activity-block[data-id="${lastActivity.id}"]`);
+                if (lastBlock) {
+                    lastBlock.classList.add('invalid');
+                    setTimeout(() => lastBlock.classList.remove('invalid'), 400);
+                }
+                return;
+            }
+            
+            if (DEBUG_MODE) {
+                console.log('Removing activity:', lastActivity);
+            }
+
+            const timeline = window.timelineManager.activeTimeline;
+            const blocks = timeline.querySelectorAll('.activity-block');
+            
+            if (DEBUG_MODE) {
+                blocks.forEach(block => {
+                    console.log('Block id:', block.dataset.id, 'Last activity id:', lastActivity.id);
+                });
+            }
+            blocks.forEach(block => {
+                if (block.dataset.id === lastActivity.id) {
+                    if (DEBUG_MODE) {
+                        console.log('Removing block with id:', lastActivity.id);
+                    }
+                    block.remove();
+                }
+            });
+
+            updateButtonStates();
+            
+            if (DEBUG_MODE) {
+                console.log('Final timelineData:', window.timelineManager.activities);
+            }
+        }
+    });
+
+    // Add click handler for Next button with debounce
+    let nextButtonLastClick = 0;
+    const NEXT_BUTTON_COOLDOWN = 2500; // 2.5 second cooldown
+    
+    document.getElementById('nextBtn').addEventListener('click', () => {
+        const currentTime = Date.now();
+        if (currentTime - nextButtonLastClick < NEXT_BUTTON_COOLDOWN) {
+            console.log('Next button on cooldown');
+            return;
+        }
+        nextButtonLastClick = currentTime;
+
+        const isLastTimeline = window.timelineManager.currentIndex === window.timelineManager.keys.length - 1;
+        
+        if (isLastTimeline) {
+            // On last timeline, show confirmation modal
+            document.getElementById('confirmationModal').style.display = 'block';
+        } else {
+            // For other timelines, proceed to next timeline
+            addNextTimeline();
+        }
+    });
+
+    // Disable back button initially
+    const backButton = document.getElementById('backBtn');
+    if (backButton) {
+        backButton.disabled = true;
+    }
+}
+
+export function updateButtonStates() {
+    const undoButton = document.getElementById('undoBtn');
+    const cleanRowButton = document.getElementById('cleanRowBtn');
+    const nextButton = document.getElementById('nextBtn');
+    
+    const currentData = getCurrentTimelineData();
+    const isEmpty = currentData.length === 0;
+    const isFull = isTimelineFull();
+    
+    // Check if there's an active timeline with activities
+    const activeTimeline = window.timelineManager.activeTimeline;
+    const hasActivities = activeTimeline && activeTimeline.querySelector('.activity-block');
+    
+    if (undoButton) undoButton.disabled = isEmpty;
+    if (cleanRowButton) cleanRowButton.disabled = !hasActivities;
+    
+    // Get current timeline coverage
+    const currentKey = getCurrentTimelineKey();
+    const currentTimeline = window.timelineManager.metadata[currentKey];
+    const currentCoverage = getTimelineCoverage();
+        
+    // Get minimum coverage requirement for current timeline
+    const minCoverage = parseInt(currentTimeline.minCoverage) || 0;
+    const meetsMinCoverage = currentCoverage >= minCoverage;
+
+    // Check if we're on the last timeline
+    const isLastTimeline = window.timelineManager.currentIndex === window.timelineManager.keys.length - 1;
+    
+    if (nextButton) {
+        if (isLastTimeline) {
+            // On last timeline, enable Next only if coverage requirement is met
+            nextButton.disabled = !meetsMinCoverage;
+            // Change button text to "Submit" if coverage requirement is met, keeping the arrow icon
+            nextButton.innerHTML = meetsMinCoverage ? 'Submit <i class="fas fa-arrow-right"></i>' : 'Next <i class="fas fa-arrow-right"></i>';
+        } else {
+            // For other timelines, enable Next if coverage requirement is met
+            nextButton.disabled = !meetsMinCoverage;
+            nextButton.innerHTML = 'Next <i class="fas fa-arrow-right"></i>';
+        }
+    }
+    
+    if (DEBUG_MODE) {
+        console.log('Button state update:', {
+            currentKey,
+            currentCoverage,
+            isLastTimeline,
+            meetsMinCoverage,
+            initializedTimelines: Array.from(window.timelineManager.initialized)
+        });
+    }
+    
+    if (DEBUG_MODE && isFull) {
+        console.log('Timeline is complete');
+    }
+}
+
+export function handleResize() {
+    const wasVertical = getIsMobile();
+    const layoutChanged = wasVertical !== updateIsMobile();
+    
+    if (layoutChanged) {
+        // Clear the DOM and reinitialize the app
+        const timelinesWrapper = document.querySelector('.timelines-wrapper');
+        if (timelinesWrapper) {
+            timelinesWrapper.innerHTML = '';
+        }
+        
+        // Store current timeline data
+        const currentState = {
+            currentIndex: window.timelineManager.currentIndex,
+            activities: { ...window.timelineManager.activities }
+        };
+        
+        // Reset timeline manager state
+        window.timelineManager.initialized.clear();
+        window.timelineManager.currentIndex = -1;
+        window.timelineManager.activeTimeline = null;
+        
+        // Reinitialize with stored data
+        init().then(() => {
+            // Restore activities
+            window.timelineManager.activities = currentState.activities;
+            
+            // Advance to current timeline
+            const advanceToCurrentTimeline = async () => {
+                while (window.timelineManager.currentIndex < currentState.currentIndex) {
+                    await addNextTimeline();
+                }
+            };
+            
+            advanceToCurrentTimeline();
+        }).catch(error => {
+            console.error('Failed to reinitialize after resize:', error);
+        });
+    }
+}
+
 export function createTimelineDataFrame() {
     // Initialize array to hold all timeline data
     const dataFrame = [];
