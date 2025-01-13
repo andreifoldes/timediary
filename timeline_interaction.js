@@ -92,7 +92,8 @@ function handleLeftEdgeResize(event, target, timelineRect) {
     const newWidth = (event.rect.width / timelineRect.width) * 100;
     const tenMinutesWidth = (10 / (24 * 60)) * 100;
     const intervals = Math.round(newWidth / tenMinutesWidth);
-    const newSize = Math.max(tenMinutesWidth, Math.min(intervals * tenMinutesWidth, 100));
+    const maxPercent = 116.7;  // 28 hours is 116.7% of 24 hours
+    const newSize = Math.max(tenMinutesWidth, Math.min(intervals * tenMinutesWidth, maxPercent));
     
     // Convert the start from hh:mm to total minutes (0..1440):
     const startMinutes = timeToMinutes(target.dataset.start);
