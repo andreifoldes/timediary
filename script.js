@@ -932,7 +932,6 @@ function setupDebugClickHandler(timeline) {
         const currentKey = getCurrentTimelineKey();
         const currentActivities = window.timelineManager.activities[currentKey] || [];
         // Hide time labels for all blocks in current timeline
-        const currentActivities = window.timelineManager.activities[currentKey] || [];
         currentActivities.forEach(activity => {
             const existingBlock = activitiesContainer.querySelector(`.activity-block[data-id="${activity.id}"]`);
             if (existingBlock) {
