@@ -1142,8 +1142,6 @@ function initTimelineInteraction(timeline) {
 }
 
 
-
-
 // Helper function to scroll to active timeline
 
 async function init() {
