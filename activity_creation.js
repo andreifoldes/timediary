@@ -247,10 +247,12 @@ function createBlockAtClickPosition(timeline, startPercent) {
   // Add label
   const timeLabel = document.createElement('div');
   timeLabel.className = 'time-label';
-  updateTimeLabel(timeLabel, block.dataset.start, block.dataset.end, block);
   block.appendChild(timeLabel);
-
+  
   timeline.appendChild(block);
+  
+  // Update label after block is in DOM
+  updateTimeLabel(timeLabel, block.dataset.start, block.dataset.end, block);
 
   // After creation, do your data logic, e.g. push to timeline store, etc.
   // ...
@@ -305,8 +307,10 @@ function finalizeDragBlock(block, timeline) {
   // Add label
   const timeLabel = document.createElement('div');
   timeLabel.className = 'time-label';
-  updateTimeLabel(timeLabel, block.dataset.start, block.dataset.end, block);
   block.appendChild(timeLabel);
+  
+  // Update label after block is in DOM
+  updateTimeLabel(timeLabel, block.dataset.start, block.dataset.end, block);
 
   // Data logic, store in timeline, etc.
   // ...
