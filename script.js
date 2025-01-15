@@ -3,11 +3,23 @@ import { Timeline } from './timeline.js';
 import { TimelineContainer } from './timeline_container.js';
 
 function deselectAllActivities() {
+    console.log('Deselecting all activities...');
+    console.log('Before deselect - Selected buttons:', document.querySelectorAll('.activity-button.selected').length);
+    
     selectedActivity = null;
     window.selectedActivity = null;
-    document.querySelectorAll('.activity-button').forEach(btn => {
+    
+    const buttons = document.querySelectorAll('.activity-button');
+    console.log('Total buttons found:', buttons.length);
+    
+    buttons.forEach(btn => {
+        if (btn.classList.contains('selected')) {
+            console.log('Deselecting button:', btn.querySelector('.activity-text').textContent);
+        }
         btn.classList.remove('selected');
     });
+    
+    console.log('After deselect - Selected buttons:', document.querySelectorAll('.activity-button.selected').length);
 }
 import { 
     getCurrentTimelineData, 
