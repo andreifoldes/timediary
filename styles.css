@@ -861,7 +861,7 @@ body {
 
 /* Floating add button for mobile */
 .floating-add-button {
-    display: flex;
+    display: none; /* Hidden by default */
     align-items: center;
     justify-content: center;
     position: fixed;
@@ -885,11 +885,10 @@ body {
     background-color: #0056b3;
 }
 
+/* Only show in mobile layout */
 @media (max-width: 1439px) {
     .floating-add-button {
-        display: flex;
-        align-items: center;
-        justify-content: center;
+        display: flex; /* Show in mobile layout */
     }
 }
 
