@@ -368,8 +368,8 @@ function renderActivities(categories, container = document.getElementById('activ
                     const isMultipleChoice = activitiesContainer.getAttribute('data-mode') === 'multiple-choice';
                     const categoryButtons = activityButton.closest('.activity-category').querySelectorAll('.activity-button');
                     
-                    // If single-choice mode, hide container after selection
-                    if (!isMultipleChoice) {
+                    // If single-choice mode AND mobile layout, hide container after selection
+                    if (!isMultipleChoice && getIsMobile()) {
                         activitiesContainer.style.display = 'none';
                     }
                     

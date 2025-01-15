@@ -374,8 +374,7 @@ body {
 
 .activities-container {
     margin: 0 20px;
-    display: none; /* Hide by default */
-    width: calc(100% - 40px); /* Account for margins */
+    width: calc(100% - 40px);
     box-sizing: border-box;
     max-width: 100%;
     overflow-x: hidden;
@@ -409,7 +408,7 @@ body {
 
 @media (max-width: 1439px) {
     .activities-container {
-        display: none;
+        display: none; /* Hidden by default in mobile */
         position: fixed;
         bottom: 80px;
         right: 20px;
