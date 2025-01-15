@@ -131,7 +131,7 @@ export function initBlockCreationByDrag(timeline) {
       if (DEBUG_MODE && isMouseDown) console.log('Mouse move ignored - no preview block');
       return;
     }
-    if (DEBUG_MODE) console.log('Mouse move event:', { isMouseDown, hasPreviewBlock: !!previewBlock });
+    // if (DEBUG_MODE) console.log('Mouse move event:', { isMouseDown, hasPreviewBlock: !!previewBlock });
 
     const rect = timeline.getBoundingClientRect();
     let currentPercent;
