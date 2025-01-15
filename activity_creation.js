@@ -2,17 +2,6 @@ import { getIsMobile } from './globals.js';
 import { 
     positionToMinutes,
     minutesToPercentage,
-
-function emitActivityPlacedEvent(activityData, timeline) {
-    const event = new CustomEvent('activityPlaced', {
-        detail: {
-            activity: activityData,
-            timeline: timeline
-        },
-        bubbles: true
-    });
-    timeline.dispatchEvent(event);
-}
     formatTimeHHMM,
     formatTimeHHMMWithDayOffset,
     formatTimeDDMMYYYYHHMM,
@@ -26,6 +15,17 @@ function emitActivityPlacedEvent(activityData, timeline) {
     updateButtonStates,
     getTextDivClass
 } from './utils.js';
+
+function emitActivityPlacedEvent(activityData, timeline) {
+    const event = new CustomEvent('activityPlaced', {
+        detail: {
+            activity: activityData,
+            timeline: timeline
+        },
+        bubbles: true
+    });
+    timeline.dispatchEvent(event);
+}
 
 import { DEBUG_MODE } from './constants.js';
 
