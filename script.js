@@ -1,6 +1,14 @@
 import { TimelineMarker } from './timeline_marker.js';
 import { Timeline } from './timeline.js';
 import { TimelineContainer } from './timeline_container.js';
+
+function deselectAllActivities() {
+    selectedActivity = null;
+    window.selectedActivity = null;
+    document.querySelectorAll('.activity-button').forEach(btn => {
+        btn.classList.remove('selected');
+    });
+}
 import { 
     getCurrentTimelineData, 
     getCurrentTimelineKey, 
@@ -455,9 +463,7 @@ function renderActivities(categories, container = document.getElementById('activ
                             };
                         } else {
                             // Deselect when no buttons are selected
-                            selectedActivity = null;
-                            window.selectedActivity = null;
-                            document.querySelectorAll('.activity-button').forEach(b => b.classList.remove('selected'));
+                            deselectAllActivities();
                         }
                     } else {
                         // Single choice mode
@@ -636,9 +642,7 @@ function renderActivities(categories, container = document.getElementById('activ
                             selectedActivity = window.selectedActivity;
                         } else {
                             // Deselect when no buttons are selected
-                            selectedActivity = null;
-                            window.selectedActivity = null;
-                            document.querySelectorAll('.activity-button').forEach(b => b.classList.remove('selected'));
+                            deselectAllActivities();
                         }
                     } else {
                         // Single choice mode
