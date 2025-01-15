@@ -624,8 +624,8 @@ function renderActivities(categories, container = document.getElementById('activ
                                 mode: 'multiple-choice'
                             };
                             
-                            selectedActivity = activityData;
                             window.selectedActivity = activityData;
+                            selectedActivity = window.selectedActivity;
                         } else {
                             selectedActivity = null;
                             window.selectedActivity = null;
