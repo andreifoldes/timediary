@@ -402,7 +402,7 @@ function finalizeDragBlock(block, timeline) {
   }
   block.appendChild(textDiv);
 
-  // Add label
+  // Add label 
   const timeLabel = document.createElement('div');
   timeLabel.className = 'time-label';
   block.appendChild(timeLabel);
