@@ -102,9 +102,9 @@ export function initBlockCreationByDrag(timeline) {
     if (getIsMobile()) {
       previewBlock.style.top = `${startPercent}%`;
       previewBlock.style.height = '0%';
-      // center horizontally if you want
-      previewBlock.style.left = '25%';
-      previewBlock.style.width = '50%';
+      // Ensure consistent width and position in mobile mode
+      previewBlock.style.left = '12.5%';
+      previewBlock.style.width = '75%';
     } else {
       previewBlock.style.left = `${startPercent}%`;
       previewBlock.style.width = '0%';

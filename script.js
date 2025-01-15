@@ -825,8 +825,8 @@ function setupDebugClickHandler(timeline) {
             if (isMobile) {
                 block.style.height = `${blockSize}%`;
                 block.style.top = `${startPositionPercent}%`;
-                block.style.width = '50%';
-                block.style.left = '25%';
+                block.style.width = '75%';
+                block.style.left = '12.5%';
             } else {
                 block.style.width = `${blockSize}%`;
                 block.style.left = `${startPositionPercent}%`;
