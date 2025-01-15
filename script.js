@@ -442,12 +442,9 @@ function renderActivities(categories, container = document.getElementById('activ
                     }
                     
                     if (isMultipleChoice) {
-                        // Toggle selection for this button
                         activityButton.classList.toggle('selected');
-            
-                        // Get all selected activities in this category
                         const selectedButtons = Array.from(categoryButtons).filter(btn => btn.classList.contains('selected'));
-            
+
                         if (selectedButtons.length > 0) {
                             selectedActivity = {
                                 selections: selectedButtons.map(btn => ({
@@ -457,14 +454,16 @@ function renderActivities(categories, container = document.getElementById('activ
                                 category: category.name
                             };
                         } else {
+                            // Deselect when no buttons are selected
                             selectedActivity = null;
+                            window.selectedActivity = null;
+                            document.querySelectorAll('.activity-button').forEach(b => b.classList.remove('selected'));
                         }
                     } else {
                         // Single choice mode
                         document.querySelectorAll('.activity-button').forEach(b => b.classList.remove('selected'));
                         activityButton.classList.add('selected');
                         
-                        // Set both window.selectedActivity and selectedActivity
                         const activityData = {
                             name: activity.name,
                             color: activity.color,
@@ -472,6 +471,13 @@ function renderActivities(categories, container = document.getElementById('activ
                         };
                         window.selectedActivity = activityData;
                         selectedActivity = activityData;
+
+                        // Deselect after setting the activity
+                        setTimeout(() => {
+                            selectedActivity = null;
+                            window.selectedActivity = null;
+                            document.querySelectorAll('.activity-button').forEach(b => b.classList.remove('selected'));
+                        }, 100);
                         
                         if (DEBUG_MODE) {
                             console.log('Selected activity:', window.selectedActivity);
@@ -629,15 +635,16 @@ function renderActivities(categories, container = document.getElementById('activ
                             window.selectedActivity = activityData;
                             selectedActivity = window.selectedActivity;
                         } else {
+                            // Deselect when no buttons are selected
                             selectedActivity = null;
                             window.selectedActivity = null;
+                            document.querySelectorAll('.activity-button').forEach(b => b.classList.remove('selected'));
                         }
                     } else {
                         // Single choice mode
                         categoryButtons.forEach(b => b.classList.remove('selected'));
                         activityButton.classList.add('selected');
                         
-                        // Set both window.selectedActivity and selectedActivity
                         const activityData = {
                             name: activity.name,
                             color: activity.color,
@@ -645,6 +652,13 @@ function renderActivities(categories, container = document.getElementById('activ
                         };
                         window.selectedActivity = activityData;
                         selectedActivity = activityData;
+
+                        // Deselect after setting the activity
+                        setTimeout(() => {
+                            selectedActivity = null;
+                            window.selectedActivity = null;
+                            document.querySelectorAll('.activity-button').forEach(b => b.classList.remove('selected'));
+                        }, 100);
                         
                         if (DEBUG_MODE) {
                             console.log('Selected activity:', window.selectedActivity);
