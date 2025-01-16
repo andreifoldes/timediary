@@ -384,10 +384,10 @@ body {
 @media (min-width: 1440px) {
     .activities-container {
         display: flex;
-        flex-wrap: wrap; /* Allow wrapping if too many categories */
-        gap: 20px;
-        align-items: start;
+        flex-direction: row; /* Ensure horizontal layout */
         justify-content: center; /* Center categories horizontally */
+        align-items: center; /* Optionally center categories vertically */
+        gap: 20px;
         margin-left: auto;
         margin-right: auto;
         width: 98vw;
@@ -396,9 +396,8 @@ body {
     }
 
     .activity-category {
-        flex: 1 1 300px; /* Allow categories to grow/shrink with min width of 300px */
-        min-width: 0;
-        max-width: 300px;
+        flex: 0 1 auto; /* Allow categories to adjust in width */
+        max-width: 300px; /* Maintain consistent max width */
         margin: 0; /* Remove any default margins */
     }
 }
