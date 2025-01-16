@@ -248,7 +248,6 @@ body {
     top: 0;
 }
 
-
 /* Desktop horizontal markers */
 @media (min-width: 1440px) {
     .timeline .hour-marker {
@@ -393,21 +392,28 @@ body {
 @media (min-width: 1440px) {
     .activities-container {
         padding: 20px 40px;
-        display: block !important;
+        display: flex;
+        flex-direction: row;
+        flex-wrap: wrap;
     }
 
     .categories-wrapper {
-        display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+        display: flex;
+        flex-direction: row;
         gap: 20px;
+        justify-content: flex-start;
         padding: 20px;
         max-width: 1200px;
         margin: 0 auto;
+        flex-wrap: wrap;
     }
 
     .activity-category {
         margin: 0;
         height: auto;
+        flex: 1 1 300px;
+        max-width: 350px;
+        min-width: 250px;
     }
 
     .activity-buttons {
@@ -532,7 +538,6 @@ body {
 .activity-button.checkbox-style {
     padding-left: 45px;
 }
-
 
 .activity-button .checkmark {
     position: absolute;
@@ -783,7 +788,6 @@ body {
         left: 0;
     }
 }
-
 
 .activity-block-text-narrow {
     width: 90%;
@@ -1065,28 +1069,13 @@ body {
         opacity: 0;
     }
     40% {
-        transform: perspective(800px) rotateX(-20deg);
+        opacity: 0.5;
     }
     70% {
-        transform: perspective(800px) rotateX(10deg);
+        transform: perspective(800px) rotateX(-20deg);
     }
     100% {
         transform: perspective(800px) rotateX(0deg);
         opacity: 1;
     }
-}
-
-.timeline-header {
-    transform-style: preserve-3d;
-    perspective: 800px;
-    transform-origin: center top;
-    position: relative;
-    z-index: 1;
-}
-
-.flip-animation {
-    animation: flipInX 0.8s ease-in-out;
-    backface-visibility: visible !important;
-    transform-origin: center top;
-    display: block;
 }
