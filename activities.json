@@ -8,7 +8,7 @@
     "primary": {
       "name": "Primary Timeline",
       "description": "",
-      "mode": "single-choice",
+      "mode": "multiple-choice",
       "min_coverage": "10",
       "categories": [
         {
@@ -24,68 +24,18 @@
           ]
         },
         {
-          "name": "Unpaid work",
+          "name": "Testing",
           "activities": [
-            {"name": "cleaning tidying house", "color": "#B0BEC5"},
-            {"name": "clothes washing, mending, sewing", "color": "#90CAF9"},
-            {"name": "maintenance of house, DIY, gardening, pet care", "color": "#81C784"},
-            {"name": "shopping, bank etc including internet", "color": "#FFB74D"}
-          ]
-        },
-        {
-          "name": "Caring",
-          "activities": [
-            {"name": "caring for own children", "color": "#B0BEC5"},
-            {"name": "caring for other children", "color": "#90CAF9"},
-            {"name": "help, caring for adult household members", "color": "#81C784"},
-            {"name": "unpaid help, caring for adults not in your household", "color": "#FFB74D"}
-          ]
-        },
-        {
-          "name": "Work/ Study",
-          "activities": [
-            {"name": "paid work (including at home)", "color": "#BDBDBD"},
-            {"name": "formal education", "color": "#D7CCC8"},
-            {"name": "recreational courses, study", "color": "#9FA8DA"},
-            {"name": "voluntary work for club, organisation", "color": "#A1887F"},
-            {"name": "work/study break", "color": "#BCAAA4"}
-          ]
-        },
-        {
-          "name": "Travel",
-          "activities": [
-            {"name": "travelling: walking/jogging", "color": "#BDBDBD"},
-            {"name": "travelling: cycle", "color": "#BCAAA4"},
-            {"name": "travelling: motorbike, moped", "color": "#D7CCC8"},
-            {"name": "travelling: in own car", "color": "#A1887F"},
-            {"name": "travelling: taxi/uber/lift", "color": "#9FA8DA"},
-            {"name": "travelling: public transport", "color": "#CE93D8"},
-            {"name": "travelling: other", "color": "#FFEE58"}
-          ]
-        },
-        {
-          "name": "Recreation",
-          "activities": [
-            {"name": "Watching TV/DVD, listening to music", "color": "#FFF176"},
-            {"name": "Talking on phone, texting, email, social media, read/write letters", "color": "#FFCC80"},
-            {"name": "reading including e-books", "color": "#E6EE9C"},
-            {"name": "using computer", "color": "#A1887F"},
-            {"name": "playing computer games", "color": "#FFAB91"},
-            {"name": "spending time with friends, family", "color": "#90CAF9"},
-            {"name": "hobbies", "color": "#FFCC80"},
-            {"name": "walking/dog walking", "color": "#E0E0E0"},
-            {"name": "playing sports, exercise", "color": "#81C784"},
-            {"name": "going out to eat, drink eg pub, restaurant", "color": "#CE93D8"},
-            {"name": "cinema, theatre, sports, cultural event", "color": "#F06292"}
-          ]
-        },
-        {
-          "name": "Other",
-          "activities": [
-            {"name": "Filling in the time use diary", "color": "#FFF176"},
-            {"name": "other not listed (enter)", "color": "#FFAB91"}
+            {"name": "sleeping", "color": "#4CAF50"},
+            {"name": "resting", "color": "#E0E0E0"},
+            {"name": "washing, dressing", "color": "#90CAF9"},
+            {"name": "eating, drinking, meal, at home or work", "color": "#FFCC80"},
+            {"name": "preparing food, cooking, washing up", "color": "#EF9A9A"},
+            {"name": "services eg. doctor/ dentist/ hairdresser", "color": "#FFAB91"},
+            {"name": "church, temple, mosque, synagogue, prayer", "color": "#CE93D8"}
           ]
         }
+
       ]
     },
     "secondary": {
@@ -194,7 +144,7 @@
     "who": {
       "name": "Who",
       "description": "Who were you with?",
-      "mode": "multiple-choice",
+      "mode": "single-choice",
       "min_coverage": "0",
       "categories": [
         {
@@ -214,7 +164,7 @@
     "device": {
       "name": "Device",
       "description": "Were you using a computer/tablet/smartphone?",
-      "mode": "multiple-choice",
+      "mode": "single-choice",
       "min_coverage": "0",
       "categories": [
         {

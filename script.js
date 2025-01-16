@@ -330,6 +330,15 @@ function renderActivities(categories, container = document.getElementById('activ
 
     const isMobile = getIsMobile();
 
+    // Create a wrapper div for desktop layout
+    const categoriesWrapper = document.createElement('div');
+    categoriesWrapper.className = 'categories-wrapper';
+    categoriesWrapper.style.display = 'flex';
+    categoriesWrapper.style.flexDirection = isMobile ? 'column' : 'row';
+    categoriesWrapper.style.gap = '20px';
+    categoriesWrapper.style.justifyContent = 'center';
+    container.appendChild(categoriesWrapper);
+
     if (isMobile) {
         const accordionContainer = document.createElement('div');
         accordionContainer.className = 'activities-accordion';
