@@ -380,6 +380,8 @@ body {
     display: flex;
     flex-direction: column;
     align-items: stretch;
+    /* Always visible in desktop by default */
+    display: flex;
 }
 
 .categories-wrapper {
