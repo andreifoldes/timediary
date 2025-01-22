@@ -54,6 +54,7 @@
       "Be as specific as possible when choosing activities",
       "If you can't find an exact match, use \"other\" and type in your activity",
       "Make sure activities don't overlap unless intended"
-    ]
+    ],
+    "noteText": "Remember: You can always go back and adjust your entries using the undo button or by clicking on activities directly."
   }
 }
