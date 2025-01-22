@@ -1,5 +1,5 @@
 import { TimelineMarker } from './timeline_marker.js';
-import { mergeTranslations, i18n, fallbackLang } from './translation.js';
+import { mergeTranslations, i18n, fallbackLang, currentTranslations } from './translation.js';
 import { Timeline } from './timeline.js';
 import { TimelineContainer } from './timeline_container.js';
 import { getCurrentTimelineData, getCurrentTimelineKey, createTimelineDataFrame } from './utils.js';

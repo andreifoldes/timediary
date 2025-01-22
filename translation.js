@@ -1,4 +1,4 @@
-let currentTranslations = {};
+export let currentTranslations = {};
 export const fallbackLang = 'en';
 
 async function loadTranslations(lang = fallbackLang) {
