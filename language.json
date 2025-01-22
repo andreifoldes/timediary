@@ -37,6 +37,23 @@
         "Where were you at the time: at home, at work or in some other place",
         "Who you were with: combinations of e.g. spouse, children, non-household members, their gender and age group, and your degree of contact with them"
       ]
-    }
+    },
+    "summaryInstructions": "Summary of instructions:",
+    "summaryItems": [
+      "SELECT an item from the options",
+      "PLACE item on the timeline",
+      "DRAG to the right (or down) the timeline",
+      "Once the timeline is filled, you may continue by clicking \"Next\"",
+      "Continue filling out each row (or column) as they appear. Adjust/delete items as necessary",
+      "Click SUBMIT once you are happy with the completed diary"
+    ],
+    "tipsHeading": "Tips for Accurate Recording",
+    "tipsItems": [
+      "Try to account for all your time - even short activities",
+      "If you did multiple things at once, record the main activity first",
+      "Be as specific as possible when choosing activities",
+      "If you can't find an exact match, use \"other\" and type in your activity",
+      "Make sure activities don't overlap unless intended"
+    ]
   }
 }
