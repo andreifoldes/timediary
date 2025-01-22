@@ -4,6 +4,15 @@
     <title>Instructions</title>
     <link rel="stylesheet" href="instructions.css">
     <script type="module" src="../translation.js"></script>
+    <style>
+        /* Temporary style to ensure layout during loading */
+        [data-i18n] { 
+            visibility: hidden;
+        }
+        [data-i18n]:not(:empty) {
+            visibility: visible;
+        }
+    </style>
 </head>
 <body>
     <div class="content">
