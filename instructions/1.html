@@ -5,10 +5,19 @@
     <link rel="stylesheet" href="instructions.css">
     <!-- Add translation system -->
     <script type="module" src="../translation.js"></script>
+    <style>
+        /* Temporary style to ensure layout during loading */
+        [data-i18n] { 
+            visibility: hidden;
+        }
+        [data-i18n]:not(:empty) {
+            visibility: visible;
+        }
+    </style>
 </head>
 <body>
     <div class="content">
-        <h1 data-i18n="instructions.welcome"></h1>
+        <h1 data-i18n="instructions.welcome">Welcome to the Time Use Diary</h1>
         <p>Thank you for your interest in completing the diary exercise.</p>
         <p data-i18n="instructions.purpose"></p>
         <p>This diary will involve you completing a short task in which you record the activities undertaken the previous day. We would like you to complete one whole day now, however, you will be re-invited to complete further days in the next few days.</p>
