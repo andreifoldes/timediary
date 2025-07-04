@@ -85,11 +85,14 @@
     <script src="js/timeline.js" type="module"></script>
     <script src="js/utils.js" type="module"></script>
     <script src="js/autoscroll.js" type="module"></script>
-    <script src="js/script.js?v=1.1" type="module"></script>
+    
     <!-- <script src="tests/timeline_test.js" type="module"></script> -->
     <script type="module">
         import { calculateTimeDifference } from './js/utils.js';
+        import {init} from './js/script.js'
         window.calculateTimeDifference = calculateTimeDifference;
+        //only calls 1 time 
+        await init()
     </script>
     <!-- <script type="module">
         import { testTimelineMarkerPositioning } from './tests/timeline_test.js';

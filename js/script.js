@@ -2281,11 +2281,7 @@ async function init() {
     }
 }
 
-init().catch(error => {
-    console.error('Failed to initialize application:', error);
-    document.getElementById('activitiesContainer').innerHTML = 
-        '<p style="color: red;">Error loading activities. Please refresh the page to try again. Error: ' + error.message + '</p>';
-});
+
 
 // Export addNextTimeline, goToPreviousTimeline and renderActivities for ui.js
-export { addNextTimeline, goToPreviousTimeline, renderActivities };
+export { addNextTimeline, goToPreviousTimeline, renderActivities, init };
